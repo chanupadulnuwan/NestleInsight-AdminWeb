@@ -1,0 +1,276 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Aptos", "Segoe UI", "Trebuchet MS", sans-serif;
+  --font-display: "Aptos Display", "Aptos", "Segoe UI", "Trebuchet MS", sans-serif;
+  --color-insight-950: #120704;
+  --color-insight-900: #1b0d08;
+  --color-insight-800: #31170d;
+  --color-insight-700: #522817;
+  --color-insight-gold: #c97935;
+  --color-insight-amber: #efb068;
+  --color-insight-sand: #f6e5d5;
+  --color-insight-ivory: #fffaf6;
+}
+
+:root {
+  color: #1a120c;
+  background: #ffffff;
+  font-family: var(--font-sans);
+  --hero-reference-image: url("/images/hero-background.jpg");
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #ffffff;
+  color: #1a120c;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(211, 126, 48, 0.22);
+  color: #1a120c;
+}
+
+/* Hero remake update: the uploaded background art is the main visual so the composition matches the user's mockup. */
+.hero-shell {
+  background-image:
+    linear-gradient(90deg, rgba(20, 7, 4, 0.62) 0%, rgba(20, 7, 4, 0.38) 36%, rgba(8, 2, 2, 0.6) 100%),
+    linear-gradient(180deg, rgba(11, 3, 2, 0.26) 0%, rgba(11, 3, 2, 0.12) 34%, rgba(11, 3, 2, 0.32) 100%),
+    var(--hero-reference-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.hero-reference-font {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.hero-subtitle-font {
+  font-family: Consolas, "Courier New", monospace;
+  letter-spacing: 0.02em;
+}
+
+/* Animation layer: preserve the subtle warm glow that the user liked without changing the mockup structure. */
+.hero-ambient {
+  background-image:
+    radial-gradient(circle at 14% 16%, rgba(255, 170, 92, 0.18), transparent 24%),
+    radial-gradient(circle at 47% 44%, rgba(209, 120, 51, 0.1), transparent 28%),
+    radial-gradient(circle at 82% 28%, rgba(255, 214, 163, 0.08), transparent 16%);
+}
+
+.grain-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.17'/%3E%3C/svg%3E");
+  mix-blend-mode: screen;
+}
+
+.hero-logo-image {
+  object-fit: contain;
+}
+
+.hero-nav-link,
+.hero-login-button,
+.hero-primary-button {
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.22);
+}
+
+/* Requested feature: animated chart-line styling and digital metric styling for the hero overlay. */
+.hero-chart-primary {
+  animation: heroChartFloat 9s ease-in-out infinite, heroChartGlow 5.2s ease-in-out infinite;
+}
+
+.hero-chart-secondary {
+  animation: heroChartFloat 12s ease-in-out infinite reverse;
+  opacity: 0.68;
+}
+
+.hero-chart-tertiary {
+  animation: heroChartFloat 10s ease-in-out infinite;
+  opacity: 0.84;
+}
+
+.hero-chart-point {
+  animation: heroPointPulse 3.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 12px rgba(239, 178, 118, 0.55));
+}
+
+.hero-data-label {
+  color: rgba(216, 136, 68, 0.88);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1;
+  text-shadow: 0 0 18px rgba(216, 136, 68, 0.16);
+  animation: heroNumberPulse 4.8s ease-in-out infinite;
+}
+
+.section-shell {
+  position: relative;
+}
+
+.section-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(243, 201, 150, 0.22), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(247, 224, 196, 0.36), transparent 30%);
+  pointer-events: none;
+}
+
+.soft-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #fff8f2 100%);
+  box-shadow: 0 24px 60px rgba(60, 30, 14, 0.09);
+}
+
+.dark-panel {
+  background:
+    radial-gradient(circle at top right, rgba(251, 185, 116, 0.14), transparent 26%),
+    linear-gradient(145deg, #1d0b06 0%, #140704 44%, #0b0302 100%);
+  box-shadow: 0 32px 80px rgba(37, 15, 5, 0.32);
+}
+
+.card-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-sheen::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(120deg, transparent 5%, rgba(255, 255, 255, 0.48) 20%, transparent 42%);
+  transform: translateX(-120%);
+  transition: transform 700ms ease;
+  pointer-events: none;
+}
+
+.card-sheen:hover::before {
+  transform: translateX(120%);
+}
+
+.hero-heading span {
+  display: block;
+  animation: headlineGlow 7s ease-in-out infinite;
+}
+
+.hero-heading span:last-child {
+  animation-delay: 180ms;
+}
+
+.animate-rise {
+  animation: riseFade 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.float-drift {
+  animation: floatDrift 10s ease-in-out infinite;
+}
+
+.particle {
+  animation: dustDrift linear infinite;
+}
+
+@keyframes riseFade {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 26px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes floatDrift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(14px, -18px, 0) scale(1.06);
+  }
+}
+
+@keyframes dustDrift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.9);
+  }
+  50% {
+    transform: translate3d(18px, -16px, 0) scale(1.2);
+  }
+  100% {
+    transform: translate3d(38px, -28px, 0) scale(0.9);
+  }
+}
+
+@keyframes headlineGlow {
+  0%, 100% {
+    text-shadow: 0 0 0 rgba(240, 176, 104, 0);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(240, 176, 104, 0.14);
+  }
+}
+
+@keyframes heroChartFloat {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@keyframes heroChartGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 0 rgba(242, 195, 142, 0));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(242, 195, 142, 0.28));
+  }
+}
+
+@keyframes heroPointPulse {
+  0%, 100% {
+    opacity: 0.82;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes heroNumberPulse {
+  0%, 100% {
+    opacity: 0.74;
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
