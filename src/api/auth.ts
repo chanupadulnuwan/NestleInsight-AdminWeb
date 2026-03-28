@@ -128,3 +128,17 @@ export async function logoutPortalAccount() {
   const { data } = await apiClient.post<{ message: string }>('/auth/logout')
   return data
 }
+
+export async function changePortalPassword(payload: {
+  currentPassword: string
+  newPassword: string
+  confirmNewPassword: string
+}) {
+  const { data } = await apiClient.patch<{ message: string }>('/auth/password', {
+    currentPassword: payload.currentPassword,
+    newPassword: payload.newPassword,
+    confirmNewPassword: payload.confirmNewPassword,
+  })
+
+  return data
+}

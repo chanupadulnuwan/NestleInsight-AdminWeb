@@ -231,6 +231,10 @@ export default function AdminDashboard() {
     return <Navigate to="/" replace />
   }
 
+  if (user.role === 'REGIONAL_MANAGER') {
+    return <Navigate to="/tm/warehouse" replace />
+  }
+
   const handleApprove = async (userId: string) => {
     setActionUserId(userId)
     setFeedback(null)

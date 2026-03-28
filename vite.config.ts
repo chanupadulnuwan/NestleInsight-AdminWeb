@@ -15,8 +15,10 @@ export default defineConfig(({ mode }) => {
       proxy: {
         "/auth": apiProxyTarget,
         "/categories": apiProxyTarget,
+        "/delivery-assignments": apiProxyTarget,
         "/products": apiProxyTarget,
         "/territories": apiProxyTarget,
+        "/tm": apiProxyTarget,
         "/uploads": apiProxyTarget,
         "/users": apiProxyTarget,
         "/warehouses": apiProxyTarget,

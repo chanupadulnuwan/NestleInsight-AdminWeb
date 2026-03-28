@@ -339,7 +339,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
       if (!isPortalUserRole(result.user.role)) throw new Error('This website is available only for Admins and Territory Managers.')
       completeSession(result.accessToken, result.user)
       onClose()
-      navigate('/admin/dashboard')
+      navigate(result.user.role === 'REGIONAL_MANAGER' ? '/tm/warehouse' : '/admin/dashboard')
     } catch (error) {
       const message = getApiErrorMessage(error, 'Unable to log in right now.')
       const code = getApiErrorCode(error)
@@ -406,7 +406,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
       if (!isPortalUserRole(loginResult.user.role)) throw new Error('This website is available only for Admins and Territory Managers.')
       completeSession(loginResult.accessToken, loginResult.user)
       onClose()
-      navigate('/admin/dashboard')
+      navigate(loginResult.user.role === 'REGIONAL_MANAGER' ? '/tm/warehouse' : '/admin/dashboard')
     } catch (error) {
       setFeedback({ tone: 'error', message: getApiErrorMessage(error, 'Unable to verify OTP right now.') })
     } finally {
