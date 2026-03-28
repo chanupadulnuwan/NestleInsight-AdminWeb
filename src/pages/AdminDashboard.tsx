@@ -33,7 +33,7 @@ const dashboardModules = [
     description: 'Maintain product records, pricing context, and visibility.',
     action: 'Open product catalog',
     className: 'bg-gradient-to-br from-[#a55f72] via-[#96566d] to-[#7c445f]',
-    route: null,
+    route: '/admin/products',
   },
   {
     badge: 'Coverage',
