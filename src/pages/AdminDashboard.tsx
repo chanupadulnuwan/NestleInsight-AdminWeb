@@ -41,7 +41,7 @@ const dashboardModules = [
     description: 'Organize region ownership and territory alignment.',
     action: 'Open territory controls',
     className: 'bg-gradient-to-br from-[#9662a2] via-[#885594] to-[#73457f]',
-    route: null,
+    route: '/admin/territories',
   },
   {
     badge: 'Storage',
@@ -49,7 +49,7 @@ const dashboardModules = [
     description: 'Review locations, linked inventory hubs, and readiness.',
     action: 'Open warehouse overview',
     className: 'bg-gradient-to-br from-[#6d62a5] via-[#5f5896] to-[#4d4a84]',
-    route: null,
+    route: '/admin/warehouses',
   },
   {
     badge: 'Fleet',
@@ -84,6 +84,22 @@ function formatRoleLabel(role: AuthUser['role']) {
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
+}
+
+function formatAccountStatus(status: AuthUser['accountStatus']) {
+  if (status === 'OTP_PENDING') {
+    return 'Pending OTP'
+  }
+
+  if (status === 'SUSPENDED') {
+    return 'Deactivated'
+  }
+
+  return status.charAt(0) + status.slice(1).toLowerCase()
+}
+
+function formatApprovalStatus(status: AuthUser['approvalStatus']) {
+  return status.charAt(0) + status.slice(1).toLowerCase()
 }
 
 function getUserInitials(user: AuthUser) {
@@ -151,9 +167,10 @@ function NavGlyph({ name }: { name: AdminSection }) {
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { user, isAuthLoading, logout } = useAuth()
+  const { user, isAuthLoading, logout, refreshSession } = useAuth()
   const [pendingUsers, setPendingUsers] = useState<AuthUser[]>([])
   const [isPendingLoading, setIsPendingLoading] = useState(false)
+  const [isRefreshingStatus, setIsRefreshingStatus] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rejectionNotes, setRejectionNotes] = useState<Record<string, string>>({})
@@ -161,6 +178,14 @@ export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState<AdminSection>('dashboard')
 
   const isAdmin = user?.role === 'ADMIN'
+  const isRegionalManager = user?.role === 'REGIONAL_MANAGER'
+  const isRegionalManagerApproved =
+    isRegionalManager && user?.approvalStatus === 'APPROVED'
+  const regionalManagerModules = dashboardModules.filter(
+    (module) =>
+      module.route === '/admin/territories' ||
+      module.route === '/admin/warehouses',
+  )
 
   const syncSection = (section: AdminSection) => {
     setActiveSection(section)
@@ -247,20 +272,52 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleRefreshStatus = async () => {
+    setIsRefreshingStatus(true)
+    setError(null)
+    setFeedback(null)
+
+    try {
+      const refreshedUser = await refreshSession()
+      if (!refreshedUser) {
+        setError('Unable to refresh the current account status right now.')
+        return
+      }
+
+      setFeedback(
+        refreshedUser.approvalStatus === 'APPROVED'
+          ? 'Your account approval is active. The territory workspace is ready.'
+          : 'Your account status is still waiting for admin approval.',
+      )
+    } catch {
+      setError('Unable to refresh the current account status right now.')
+    } finally {
+      setIsRefreshingStatus(false)
+    }
+  }
+
   const sectionDetails: Record<AdminSection, { breadcrumb: string; title: string; description: string }> = {
     dashboard: {
       breadcrumb: isAdmin ? 'Portal / Dashboard' : 'Portal / Workspace',
-      title: isAdmin ? 'Admin Dashboard' : 'Regional Manager Workspace',
+      title: isAdmin
+        ? 'Admin Dashboard'
+        : isRegionalManagerApproved
+          ? 'Territory Manager Dashboard'
+          : 'Account Status Dashboard',
       description: isAdmin
         ? 'Manage users, products, territories, warehouses, and vehicle assignments from one clean control center.'
-        : 'Review your web portal access details and keep track of approval progress from one place.',
+        : isRegionalManagerApproved
+          ? 'Open the territory and warehouse workspace from the same portal shell used by the admin team.'
+          : 'Your account has completed OTP verification and is now waiting for administrator approval.',
     },
     approvals: {
       breadcrumb: 'Portal / Approvals',
       title: 'Approvals',
       description: isAdmin
         ? 'Review and action pending web portal requests for territory and regional teams.'
-        : 'Administrator approval is still required before full web portal access becomes active.',
+        : isRegionalManagerApproved
+          ? 'Your web account approval is active.'
+          : 'Administrator approval is still required before the full territory workspace becomes active.',
     },
     orders: {
       breadcrumb: 'Portal / Orders',
@@ -317,13 +374,72 @@ export default function AdminDashboard() {
             </button>
           ))}
       </section>
+    ) : isRegionalManagerApproved ? (
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {regionalManagerModules.map((module) => (
+          <button
+            key={module.title}
+            type="button"
+            onClick={() => {
+              if (module.route) {
+                navigate(module.route)
+              }
+            }}
+            className={`relative overflow-hidden rounded-[1.8rem] text-left text-white shadow-[0_22px_54px_rgba(64,30,15,0.18)] transition duration-300 hover:-translate-y-1 ${module.className}`}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.24),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(255,255,255,0.18),_transparent_26%)]" />
+            <div className="relative flex min-h-[18rem] flex-col">
+              <div className="px-5 pt-5">
+                <span className="rounded-[0.8rem] bg-[#f3b539] px-4 py-2 text-sm font-bold text-[#5a2e0d] shadow-[0_12px_30px_rgba(87,42,11,0.2)]">
+                  {module.badge}
+                </span>
+              </div>
+              <div className="mt-auto px-5 pb-6 pt-12">
+                <h2 className="max-w-[12rem] text-[1.9rem] font-bold leading-tight tracking-[-0.03em]">{module.title}</h2>
+                <p className="mt-3 max-w-[16rem] text-sm leading-6 text-white/82">{module.description}</p>
+              </div>
+              <div className="border-t border-white/18 px-5 py-4 text-sm font-medium tracking-[0.03em] text-white/90">
+                {module.action}
+              </div>
+            </div>
+          </button>
+        ))}
+      </section>
     ) : (
       <section className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
         <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Access Status</p>
-        <h2 className="mt-3 text-[1.8rem] font-bold tracking-[-0.04em] text-[#4d3020]">Your web account is connected</h2>
+        <h2 className="mt-3 text-[1.8rem] font-bold tracking-[-0.04em] text-[#4d3020]">Your account is waiting for admin approval</h2>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-[#7f6657]">
-          This workspace is reserved for administrators. Your account details remain available here while approval and activation steps are completed.
+          OTP verification is complete. Once an administrator approves your account, this dashboard will unlock the territory and warehouse workspace.
         </p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+            <p className="text-sm font-semibold text-[#8a6c58]">Approval Status</p>
+            <p className="mt-2 text-[1.2rem] font-bold text-[#4d3020]">{formatApprovalStatus(user.approvalStatus)}</p>
+          </div>
+          <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+            <p className="text-sm font-semibold text-[#8a6c58]">Account Status</p>
+            <p className="mt-2 text-[1.2rem] font-bold text-[#4d3020]">{formatAccountStatus(user.accountStatus)}</p>
+          </div>
+          <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+            <p className="text-sm font-semibold text-[#8a6c58]">Territory</p>
+            <p className="mt-2 text-[1.2rem] font-bold text-[#4d3020]">{user.territoryName ?? 'Not assigned yet'}</p>
+          </div>
+          <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+            <p className="text-sm font-semibold text-[#8a6c58]">Warehouse</p>
+            <p className="mt-2 text-[1.2rem] font-bold text-[#4d3020]">{user.warehouseName ?? 'Not assigned yet'}</p>
+          </div>
+        </div>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => void handleRefreshStatus()}
+            disabled={isRefreshingStatus}
+            className="rounded-[1rem] bg-[#8b5a3a] px-4 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-[#73492f] disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isRefreshingStatus ? 'Checking status...' : 'Refresh approval status'}
+          </button>
+        </div>
       </section>
     )
   } else if (activeSection === 'approvals') {
@@ -373,7 +489,8 @@ export default function AdminDashboard() {
                           <p><span className="font-semibold text-[#5c4030]">Email:</span> {pendingUser.email}</p>
                           <p><span className="font-semibold text-[#5c4030]">Telephone:</span> {pendingUser.phoneNumber}</p>
                           <p><span className="font-semibold text-[#5c4030]">Employee ID:</span> {pendingUser.employeeId ?? 'Not provided'}</p>
-                          <p><span className="font-semibold text-[#5c4030]">Territory:</span> {pendingUser.warehouseName ?? 'Not provided'}</p>
+                          <p><span className="font-semibold text-[#5c4030]">Territory:</span> {pendingUser.territoryName ?? 'Not provided'}</p>
+                          <p><span className="font-semibold text-[#5c4030]">Warehouse:</span> {pendingUser.warehouseName ?? 'Not provided'}</p>
                           <p><span className="font-semibold text-[#5c4030]">Username:</span> {pendingUser.username}</p>
                           <p><span className="font-semibold text-[#5c4030]">Submitted:</span> {formatPortalDate(pendingUser.createdAt)}</p>
                         </div>
@@ -415,9 +532,31 @@ export default function AdminDashboard() {
       </div>
     ) : (
       <section className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
-        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Awaiting Review</p>
-        <h2 className="mt-3 text-[1.75rem] font-bold tracking-[-0.04em] text-[#4d3020]">Administrator approval is still required</h2>
-        <p className="mt-3 text-sm leading-7 text-[#7f6657]">New web accounts remain here until an administrator reviews them.</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">
+          {isRegionalManagerApproved ? 'Approval Active' : 'Awaiting Review'}
+        </p>
+        <h2 className="mt-3 text-[1.75rem] font-bold tracking-[-0.04em] text-[#4d3020]">
+          {isRegionalManagerApproved
+            ? 'Your administrator approval is complete'
+            : 'Administrator approval is still required'}
+        </h2>
+        <p className="mt-3 text-sm leading-7 text-[#7f6657]">
+          {isRegionalManagerApproved
+            ? 'Your territory workspace is active. You can now open the territory and warehouse sections from the dashboard.'
+            : 'New web accounts remain here until an administrator reviews them.'}
+        </p>
+        {!isRegionalManagerApproved ? (
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={() => void handleRefreshStatus()}
+              disabled={isRefreshingStatus}
+              className="rounded-[1rem] border border-[#d7baa3] bg-white px-4 py-3 text-sm font-semibold text-[#6e4d3b] transition duration-300 hover:border-[#c9976f] hover:text-[#4d3020] disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isRefreshingStatus ? 'Checking status...' : 'Refresh approval status'}
+            </button>
+          </div>
+        ) : null}
       </section>
     )
   } else if (activeSection === 'orders') {
@@ -468,7 +607,9 @@ export default function AdminDashboard() {
             <div><p className="text-sm font-semibold text-[#8f7362]">Email</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{user.email}</p></div>
             <div><p className="text-sm font-semibold text-[#8f7362]">Telephone</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{user.phoneNumber}</p></div>
             <div><p className="text-sm font-semibold text-[#8f7362]">Employee ID</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{user.employeeId ?? 'Not provided'}</p></div>
-            <div><p className="text-sm font-semibold text-[#8f7362]">Territory</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{user.warehouseName ?? 'Not assigned yet'}</p></div>
+            <div><p className="text-sm font-semibold text-[#8f7362]">Territory</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{user.territoryName ?? 'Not assigned yet'}</p></div>
+            <div><p className="text-sm font-semibold text-[#8f7362]">Warehouse</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{user.warehouseName ?? 'Not assigned yet'}</p></div>
+            <div><p className="text-sm font-semibold text-[#8f7362]">Approval Status</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{formatApprovalStatus(user.approvalStatus)}</p></div>
           </div>
         </article>
         <article className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
@@ -495,7 +636,13 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.26em] text-[#e1ba97]">Nestle Insight</p>
-                <p className="mt-1 text-sm text-[#e9d7cb]">Admin Portal</p>
+                <p className="mt-1 text-sm text-[#e9d7cb]">
+                  {isAdmin
+                    ? 'Admin Portal'
+                    : isRegionalManagerApproved
+                      ? 'Territory Manager Portal'
+                      : 'Approval Status Portal'}
+                </p>
               </div>
             </div>
           </div>

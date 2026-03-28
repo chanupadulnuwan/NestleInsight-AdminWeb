@@ -24,6 +24,10 @@ export interface AuthUser {
   nic: string | null
   shopName: string | null
   address: string | null
+  territoryId: string | null
+  territoryName: string | null
+  territory: string | null
+  warehouseId: string | null
   warehouseName: string | null
   latitude: number | null
   longitude: number | null
@@ -57,7 +61,7 @@ export interface PortalSignupPayload {
   employeeId: string
   username: string
   role: WebPortalRole
-  territory?: string
+  warehouseName?: string
   password: string
   confirmPassword: string
 }
@@ -77,7 +81,7 @@ export async function loginPortalAccount(payload: { identifier: string; password
 }
 
 export async function registerPortalAccount(payload: PortalSignupPayload) {
-  const territory = payload.territory?.trim()
+  const warehouseName = payload.warehouseName?.trim()
 
   const { data } = await apiClient.post<AuthResponse>('/auth/register', {
     firstName: payload.firstName.trim(),
@@ -90,7 +94,9 @@ export async function registerPortalAccount(payload: PortalSignupPayload) {
     confirmPassword: payload.confirmPassword,
     role: payload.role,
     platformAccess: 'WEB',
-    ...(payload.role === 'REGIONAL_MANAGER' && territory ? { warehouseName: territory } : {}),
+    ...(payload.role === 'REGIONAL_MANAGER' && warehouseName
+      ? { warehouseName }
+      : {}),
   })
 
   return data

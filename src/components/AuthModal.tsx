@@ -11,6 +11,7 @@ import {
   type WebPortalRole,
 } from '../api/auth'
 import { getApiErrorCode, getApiErrorMessage } from '../api/client'
+import { lookupWarehouseByName } from '../api/warehouses'
 import { useAuth } from '../context/AuthContext'
 
 type AuthView = 'login' | 'signup' | 'otp' | 'pending'
@@ -29,7 +30,8 @@ interface SignupFormValues {
   employeeId: string
   username: string
   role: WebPortalRole
-  territory: string
+  warehouseName: string
+  territoryName: string
   password: string
   confirmPassword: string
 }
@@ -249,7 +251,8 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
       employeeId: '',
       username: '',
       role: 'ADMIN',
-      territory: '',
+      warehouseName: '',
+      territoryName: '',
       password: '',
       confirmPassword: '',
     },
@@ -258,6 +261,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
 
   const selectedRole = signupForm.watch('role')
   const signupPassword = signupForm.watch('password')
+  const warehouseNameValue = signupForm.watch('warehouseName')
 
   useEffect(() => {
     if (!isOpen) return
@@ -270,9 +274,35 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
 
   useEffect(() => {
     if (selectedRole !== 'REGIONAL_MANAGER') {
-      signupForm.setValue('territory', '')
+      signupForm.setValue('warehouseName', '')
+      signupForm.setValue('territoryName', '')
     }
   }, [selectedRole, signupForm])
+
+  const handleWarehouseLookup = async () => {
+    if (selectedRole !== 'REGIONAL_MANAGER') {
+      return
+    }
+
+    const warehouseName = warehouseNameValue.trim()
+    if (!warehouseName) {
+      signupForm.setValue('territoryName', '')
+      return
+    }
+
+    try {
+      const response = await lookupWarehouseByName(warehouseName)
+      signupForm.setValue('warehouseName', response.warehouse.name)
+      signupForm.setValue('territoryName', response.warehouse.territoryName)
+      signupForm.clearErrors('warehouseName')
+    } catch (error) {
+      signupForm.setValue('territoryName', '')
+      signupForm.setError('warehouseName', {
+        type: 'manual',
+        message: getApiErrorMessage(error, 'Warehouse name was not found.'),
+      })
+    }
+  }
 
   useEffect(() => {
     if (!isOpen) return
@@ -338,7 +368,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
     try {
       const result = await registerPortalAccount({
         ...values,
-        territory: values.role === 'REGIONAL_MANAGER' ? values.territory : undefined,
+        warehouseName: values.role === 'REGIONAL_MANAGER' ? values.warehouseName : undefined,
       })
 
       if (result.otpRequired) {
@@ -475,7 +505,32 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
                       <option value="REGIONAL_MANAGER">Territory Manager</option>
                     </PortalSelect>
                     {selectedRole === 'REGIONAL_MANAGER' ? (
-                      <PortalInput label="Territory" icon={<Icon kind="map" />} placeholder="Enter the assigned territory" error={signupForm.formState.errors.territory?.message} {...signupForm.register('territory', { validate: (value) => selectedRole !== 'REGIONAL_MANAGER' || value.trim() ? true : 'Territory is required for Territory Managers.' })} />
+                      <div className="space-y-4">
+                        <PortalInput
+                          label="Warehouse Name"
+                          icon={<Icon kind="map" />}
+                          placeholder="Enter the registered warehouse name"
+                          error={signupForm.formState.errors.warehouseName?.message}
+                          helperText="If the warehouse matches a registered record, the territory will auto-fill."
+                          {...signupForm.register('warehouseName', {
+                            validate: (value) =>
+                              selectedRole !== 'REGIONAL_MANAGER' || value.trim()
+                                ? true
+                                : 'Warehouse name is required for Territory Managers.',
+                            onBlur: () => {
+                              void handleWarehouseLookup()
+                            },
+                          })}
+                        />
+                        <PortalInput
+                          label="Territory"
+                          icon={<Icon kind="map" />}
+                          placeholder="Auto-filled from the warehouse"
+                          readOnly
+                          error={signupForm.formState.errors.territoryName?.message}
+                          {...signupForm.register('territoryName')}
+                        />
+                      </div>
                     ) : (
                       <div className="rounded-[1.3rem] border border-dashed border-[#e6ccb8] bg-[#fffdfb] px-4 py-5 text-sm leading-6 text-[#a48673]">Admin accounts go straight to OTP verification after signup.</div>
                     )}
