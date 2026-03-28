@@ -1,4 +1,5 @@
 import type { CategoryRecord } from "../api/categories";
+import { resolveMediaUrl } from "../api/client";
 import type {
   ProductPayload,
   ProductRecord,
@@ -148,7 +149,7 @@ export function productToForm(product: ProductRecord): ProductFormState {
     description: product.description ?? "",
     status: product.status,
     imageFile: null,
-    imagePreviewUrl: product.imageUrl ?? "",
+    imagePreviewUrl: resolveMediaUrl(product.imageUrl),
     imageFileName: "",
   };
 }

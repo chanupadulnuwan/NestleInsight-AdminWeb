@@ -15,7 +15,7 @@ import {
   type TmWarehouseUser,
   type TmWarehouseVehicle,
 } from '../../api/tm'
-import { getApiErrorMessage } from '../../api/client'
+import { getApiErrorMessage, resolveMediaUrl } from '../../api/client'
 import { formatCurrency } from '../productsPage.helpers'
 
 export const fieldClass =
@@ -276,7 +276,7 @@ export function AddInventoryModal({
             <div className="mt-4 space-y-4">
               {selectedProduct.imageUrl ? (
                 <div className="overflow-hidden rounded-[1.2rem] border border-[#eadfd5] bg-white">
-                  <img src={selectedProduct.imageUrl} alt={selectedProduct.productName} className="h-40 w-full object-cover" />
+                  <img src={resolveMediaUrl(selectedProduct.imageUrl)} alt={selectedProduct.productName} className="h-40 w-full object-cover" />
                 </div>
               ) : null}
               <div className="rounded-[1.2rem] border border-[#eadfd5] bg-white px-4 py-4 text-sm text-[#6f5648]">

@@ -115,3 +115,10 @@ export function getApiErrorCode(error: unknown) {
   const code = (payload as { code?: unknown }).code
   return typeof code === 'string' ? code : undefined
 }
+
+export function resolveMediaUrl(path: string | null | undefined): string {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  const base = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
+  return base + path
+}

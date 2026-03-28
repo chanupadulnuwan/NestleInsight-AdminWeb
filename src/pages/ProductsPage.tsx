@@ -2,7 +2,7 @@ import type { ChangeEvent } from "react";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { fetchCategories, type CategoryRecord } from "../api/categories";
-import { getApiErrorCode, getApiErrorMessage } from "../api/client";
+import { getApiErrorCode, getApiErrorMessage, resolveMediaUrl } from "../api/client";
 import {
   checkSkuAvailability,
   createProduct,
@@ -778,7 +778,7 @@ export default function ProductsPage() {
                     <div className="flex h-56 items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.96),transparent_42%),linear-gradient(180deg,#fffdfb_0%,#fff4e9_100%)] p-5">
                       {product.imageUrl ? (
                         <img
-                          src={product.imageUrl}
+                          src={resolveMediaUrl(product.imageUrl)}
                           alt={product.productName}
                           className="h-full w-auto object-contain"
                         />
@@ -884,7 +884,7 @@ export default function ProductsPage() {
                 <div className="flex justify-center rounded-[1.5rem] bg-[linear-gradient(180deg,#fffdfb_0%,#fff4e9_100%)] p-6">
                   {selectedProduct.imageUrl ? (
                     <img
-                      src={selectedProduct.imageUrl}
+                      src={resolveMediaUrl(selectedProduct.imageUrl)}
                       alt={selectedProduct.productName}
                       className="h-72 w-auto object-contain"
                     />

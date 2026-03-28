@@ -1,4 +1,5 @@
 import { type TmInventoryItem, type TmWarehouseUser, type TmWarehouseVehicle } from '../../api/tm'
+import { resolveMediaUrl } from '../../api/client'
 import { Pill } from './TmWarehouseOverlays'
 
 export const surfaceClass =
@@ -51,7 +52,7 @@ export function InventorySection({ inventory }: { inventory: TmInventoryItem[] }
               <tr key={item.id} className="border-b border-[#f1e5db] last:border-0 hover:bg-[#fffaf7]">
                 <td className="px-5 py-3.5 font-medium text-[#4d3020]">
                   <div className="flex min-w-0 items-center gap-3">
-                    {item.imageUrl ? <img src={item.imageUrl} alt={item.productName ?? 'Product'} className="h-10 w-10 rounded-xl object-cover" /> : null}
+                    {item.imageUrl ? <img src={resolveMediaUrl(item.imageUrl)} alt={item.productName ?? 'Product'} className="h-10 w-10 rounded-xl object-cover" /> : null}
                     <div className="min-w-0">
                       <p className="truncate">{item.productName ?? '-'}</p>
                       {item.packSize ? <p className="mt-1 text-xs text-[#8a6c58]">{item.packSize}</p> : null}
