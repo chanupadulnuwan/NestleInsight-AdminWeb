@@ -250,7 +250,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
       email: '',
       employeeId: '',
       username: '',
-      role: 'ADMIN',
+      role: 'REGIONAL_MANAGER',
       warehouseName: '',
       territoryName: '',
       password: '',
@@ -501,7 +501,6 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <PortalSelect label="Role" icon={<Icon kind="shield" />} error={signupForm.formState.errors.role?.message} {...signupForm.register('role', { required: 'Role is required.' })}>
-                      <option value="ADMIN">Admin</option>
                       <option value="REGIONAL_MANAGER">Territory Manager</option>
                     </PortalSelect>
                     {selectedRole === 'REGIONAL_MANAGER' ? (
@@ -531,9 +530,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
                           {...signupForm.register('territoryName')}
                         />
                       </div>
-                    ) : (
-                      <div className="rounded-[1.3rem] border border-dashed border-[#e6ccb8] bg-[#fffdfb] px-4 py-5 text-sm leading-6 text-[#a48673]">Admin accounts go straight to OTP verification after signup.</div>
-                    )}
+                    ) : null}
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <PortalInput label="Password" icon={<Icon kind="lock" />} type={showSignupPassword ? 'text' : 'password'} placeholder="Create a strong password" autoComplete="new-password" helperText="At least 8 characters with uppercase, lowercase, and a number." error={signupForm.formState.errors.password?.message} trailing={<PasswordToggle visible={showSignupPassword} onClick={() => setShowSignupPassword((value) => !value)} />} {...signupForm.register('password', { required: 'Password is required.', minLength: { value: 8, message: 'Password must be at least 8 characters.' }, pattern: { value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, message: 'Use uppercase, lowercase, and a number.' } })} />

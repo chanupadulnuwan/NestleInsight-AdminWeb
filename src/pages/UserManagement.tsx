@@ -11,7 +11,7 @@ import {
 } from '../api/users'
 import { useAuth } from '../context/AuthContext'
 
-type AdminSection = 'dashboard' | 'approvals' | 'orders' | 'stocks' | 'settings'
+type AdminSection = 'dashboard' | 'approvals' | 'orders' | 'stocks'
 type ManageableRole = 'SHOP_OWNER' | 'TERRITORY_DISTRIBUTOR' | 'REGIONAL_MANAGER'
 type PendingAction = 'REJECT' | 'DEACTIVATE' | null
 
@@ -23,7 +23,6 @@ const navigationItems: Array<{ key: AdminSection; label: string }> = [
   { key: 'approvals', label: 'Approvals' },
   { key: 'orders', label: 'Orders' },
   { key: 'stocks', label: 'Stocks' },
-  { key: 'settings', label: 'Settings' },
 ]
 
 const roleOptions: Array<{ value: 'ALL' | ManageableRole; label: string }> = [

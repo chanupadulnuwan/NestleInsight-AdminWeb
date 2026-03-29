@@ -53,17 +53,17 @@ const dashboardModules = [
   {
     badge: 'Fleet',
     title: 'Assign Vehicles',
-    description: 'Connect delivery vehicles with routes and dispatch teams.',
+    description: 'View all registered vehicles, their warehouse links, and dispatch capacity.',
     action: 'Open fleet assignments',
     className: 'bg-gradient-to-br from-[#5f7ea4] via-[#547291] to-[#47617d]',
-    route: null,
+    route: '/admin/warehouses',
   },
   {
     badge: 'Campaigns',
     title: 'Promotions',
     description: 'Manage offers, campaign visibility, and promotional activity.',
     action: 'Open promotions',
-    className: 'bg-gradient-to-br from-[#8cb53a] via-[#7ca031] to-[#688629]',
+    className: 'bg-gradient-to-br from-[#7a8a4a] via-[#6b7b3e] to-[#596832]',
     route: null,
   },
 ]
