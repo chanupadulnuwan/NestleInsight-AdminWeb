@@ -10,8 +10,7 @@ export type AdminSection =
   | "dashboard"
   | "approvals"
   | "orders"
-  | "stocks"
-  | "settings";
+  | "stocks";
 export type FormMode = "create" | "edit";
 export type ProductFilterStatus = "ALL" | ProductStatus;
 export type ProductFormField =
@@ -53,7 +52,6 @@ export const navigationItems: Array<{ key: AdminSection; label: string }> = [
   { key: "approvals", label: "Approvals" },
   { key: "orders", label: "Orders" },
   { key: "stocks", label: "Stocks" },
-  { key: "settings", label: "Settings" },
 ];
 
 export const brandSuggestions = [

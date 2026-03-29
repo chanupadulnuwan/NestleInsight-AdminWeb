@@ -5,7 +5,7 @@ import { getApiErrorMessage } from '../api/client'
 import { approvePendingUser, fetchPendingUsers, rejectPendingUser } from '../api/users'
 import { useAuth } from '../context/AuthContext'
 
-type AdminSection = 'dashboard' | 'approvals' | 'orders' | 'stocks' | 'settings'
+type AdminSection = 'dashboard' | 'approvals' | 'orders' | 'stocks'
 
 const surfaceClassName =
   'rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]'
@@ -15,7 +15,6 @@ const navigationItems: Array<{ key: AdminSection; label: string }> = [
   { key: 'approvals', label: 'Approvals' },
   { key: 'orders', label: 'Orders' },
   { key: 'stocks', label: 'Stocks' },
-  { key: 'settings', label: 'Settings' },
 ]
 
 const dashboardModules = [
@@ -333,15 +332,9 @@ export default function AdminDashboard() {
       title: 'Stocks',
       description: 'Follow inventory visibility, warehouse readiness, and stock movement checkpoints.',
     },
-    settings: {
-      breadcrumb: 'Portal / Settings',
-      title: 'Settings',
-      description: 'Review signed-in account details, activation history, and portal access information.',
-    },
   }
 
   const activeView = sectionDetails[activeSection]
-  const profileName = `${user.firstName} ${user.lastName}`.trim()
   const pendingLabel = isPendingLoading ? 'Loading...' : `${pendingUsers.length} pending`
 
   let content = null
@@ -600,33 +593,6 @@ export default function AdminDashboard() {
         </article>
       </section>
     )
-  } else {
-    content = (
-      <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-        <article className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Profile Snapshot</p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <div><p className="text-sm font-semibold text-[#8f7362]">Full name</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{profileName}</p></div>
-            <div><p className="text-sm font-semibold text-[#8f7362]">Username</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{user.username}</p></div>
-            <div><p className="text-sm font-semibold text-[#8f7362]">Email</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{user.email}</p></div>
-            <div><p className="text-sm font-semibold text-[#8f7362]">Telephone</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{user.phoneNumber}</p></div>
-            <div><p className="text-sm font-semibold text-[#8f7362]">Employee ID</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{user.employeeId ?? 'Not provided'}</p></div>
-            <div><p className="text-sm font-semibold text-[#8f7362]">Territory</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{user.territoryName ?? 'Not assigned yet'}</p></div>
-            <div><p className="text-sm font-semibold text-[#8f7362]">Warehouse</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{user.warehouseName ?? 'Not assigned yet'}</p></div>
-            <div><p className="text-sm font-semibold text-[#8f7362]">Approval Status</p><p className="mt-1 text-lg font-semibold text-[#5b4334]">{formatApprovalStatus(user.approvalStatus)}</p></div>
-          </div>
-        </article>
-        <article className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Activation Timeline</p>
-          <div className="mt-5 space-y-4 text-sm leading-7 text-[#7d6351]">
-            <div><p className="font-semibold text-[#5b4334]">Created</p><p>{formatPortalDate(user.createdAt)}</p></div>
-            <div><p className="font-semibold text-[#5b4334]">Approved by</p><p>{user.approvedBy ?? 'Self-service or not approved yet'}</p></div>
-            <div><p className="font-semibold text-[#5b4334]">Approved at</p><p>{formatPortalDate(user.approvedAt)}</p></div>
-            <div><p className="font-semibold text-[#5b4334]">OTP verified at</p><p>{formatPortalDate(user.otpVerifiedAt)}</p></div>
-          </div>
-        </article>
-      </section>
-    )
   }
 
   return (
@@ -676,15 +642,42 @@ export default function AdminDashboard() {
             })}
           </nav>
 
-          <div className="mt-8 rounded-[1.5rem] border border-white/12 bg-white/6 px-4 py-4 backdrop-blur-sm lg:mt-auto">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#d7965f] to-[#b86d35] text-sm font-bold text-white">
-                {getUserInitials(user)}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[#fff6ee]">{user.username}</p>
-                <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[#dcc7b8]">{formatRoleLabel(user.role)}</p>
-              </div>
+          <div className="mt-auto flex flex-col gap-1 border-t border-white/10 pt-6">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/settings')}
+              className="flex items-center gap-3 rounded-[1.35rem] px-3 py-3 text-left text-[#e0cdc1] transition duration-200 hover:bg-white/8 hover:text-white"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-[1rem] border border-white/10 bg-black/10 text-[#f2ddca]">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </span>
+              <span className="block truncate text-[0.97rem] font-semibold">Settings</span>
+            </button>
+
+            <div className="mt-1 rounded-[1.5rem] border border-white/12 bg-white/6 px-4 py-4 backdrop-blur-sm">
+              <button
+                type="button"
+                onClick={() => navigate('/admin/profile')}
+                className="flex w-full items-center gap-3 text-left"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#d7965f] to-[#b86d35] text-sm font-bold text-white">
+                  {getUserInitials(user)}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[#fff6ee]">{user.username}</p>
+                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[#dcc7b8]">{formatRoleLabel(user.role)}</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => void logout()}
+                className="mt-4 w-full rounded-[1rem] border border-white/12 bg-black/10 px-4 py-2.5 text-sm font-semibold text-[#fff6ee] transition duration-200 hover:bg-white/10"
+              >
+                Log out
+              </button>
             </div>
           </div>
         </aside>

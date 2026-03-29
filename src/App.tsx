@@ -13,6 +13,8 @@ import TmOrdersPage from './pages/tm/TmOrdersPage'
 import TmStockPage from './pages/tm/TmStockPage'
 import TmSettingsPage from './pages/tm/TmSettingsPage'
 import TmProfilePage from './pages/tm/TmProfilePage'
+import AdminProfilePage from './pages/AdminProfilePage'
+import AdminSettingsPage from './pages/AdminSettingsPage'
 
 function RoleBasedRedirect() {
   const { user, isAuthLoading } = useAuth()
@@ -37,6 +39,8 @@ export default function App() {
       <Route path="/admin/territories" element={<TerritoriesPage />} />
       <Route path="/admin/users" element={<UserManagement />} />
       <Route path="/admin/warehouses" element={<WarehousesPage />} />
+      <Route path="/admin/profile" element={<AdminProfilePage />} />
+      <Route path="/admin/settings" element={<AdminSettingsPage />} />
 
       {/* Territory Manager routes */}
       <Route path="/tm/warehouse" element={<TmWarehousePage />} />
