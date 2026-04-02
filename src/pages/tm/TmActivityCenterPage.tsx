@@ -17,6 +17,10 @@ function activityTone(type: string) {
     return 'border-[#cfe2c8] bg-[#f3fbef] text-[#4d6c45]'
   }
 
+  if (type.includes('FEEDBACK')) {
+    return 'border-[#b8d4e8] bg-[#f0f7fc] text-[#2e6b99]'
+  }
+
   if (type.includes('LOGOUT')) {
     return 'border-[#d7c5b6] bg-[#fff8f2] text-[#8b5a3a]'
   }
