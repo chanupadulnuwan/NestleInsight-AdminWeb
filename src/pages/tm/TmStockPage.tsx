@@ -13,7 +13,7 @@ import {
 } from '../../api/tm'
 import { getApiErrorMessage } from '../../api/client'
 import { TerritoryManagerPortalShell } from '../../components/TerritoryManagerPortalShell'
-import { useAuth } from '../../context/AuthContext'
+import { useTmGuard } from '../../hooks/useTmGuard'
 
 const surfaceClass =
   'rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]'
@@ -29,7 +29,7 @@ const INCIDENT_LABELS: Record<string, string> = {
 }
 
 export default function TmStockPage() {
-  const { user, isAuthLoading } = useAuth()
+  const { user, isUnauthorized } = useTmGuard()
   const [activeTab, setActiveTab] = useState<'stock' | 'returns' | 'incidents' | 'trips'>(
     'stock',
   )
@@ -50,7 +50,7 @@ export default function TmStockPage() {
     {},
   )
 
-  if (!isAuthLoading && (!user || user.role !== 'REGIONAL_MANAGER')) {
+  if (isUnauthorized) {
     return <Navigate to="/" replace />
   }
 

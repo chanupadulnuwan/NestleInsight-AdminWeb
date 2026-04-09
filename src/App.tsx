@@ -16,6 +16,9 @@ import TmProfilePage from './pages/tm/TmProfilePage'
 import AdminProfilePage from './pages/AdminProfilePage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
 
+// Roles that belong to the Territory Manager portal
+const TM_ROLES = ['REGIONAL_MANAGER', 'TERRITORY_DISTRIBUTOR']
+
 function RoleBasedRedirect() {
   const { user, isAuthLoading } = useAuth()
 
@@ -23,7 +26,8 @@ function RoleBasedRedirect() {
 
   if (!user) return <Navigate to="/" replace />
 
-  if (user.role === 'REGIONAL_MANAGER') return <Navigate to="/tm/warehouse" replace />
+  // Both REGIONAL_MANAGER and TERRITORY_DISTRIBUTOR go to the TM portal
+  if (TM_ROLES.includes(user.role)) return <Navigate to="/tm/warehouse" replace />
 
   return <Navigate to="/admin/dashboard" replace />
 }

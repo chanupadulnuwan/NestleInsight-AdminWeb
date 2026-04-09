@@ -273,14 +273,14 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
   }, [initialView, isOpen, otpForm])
 
   useEffect(() => {
-    if (selectedRole !== 'REGIONAL_MANAGER') {
+    if (selectedRole !== 'REGIONAL_MANAGER' && selectedRole !== 'TERRITORY_DISTRIBUTOR') {
       signupForm.setValue('warehouseName', '')
       signupForm.setValue('territoryName', '')
     }
   }, [selectedRole, signupForm])
 
   const handleWarehouseLookup = async () => {
-    if (selectedRole !== 'REGIONAL_MANAGER') {
+    if (selectedRole !== 'REGIONAL_MANAGER' && selectedRole !== 'TERRITORY_DISTRIBUTOR') {
       return
     }
 
@@ -339,7 +339,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
       if (!isPortalUserRole(result.user.role)) throw new Error('This website is available only for Admins and Territory Managers.')
       completeSession(result.accessToken, result.user)
       onClose()
-      navigate(result.user.role === 'REGIONAL_MANAGER' ? '/tm/warehouse' : '/admin/dashboard')
+      navigate(result.user.role === 'REGIONAL_MANAGER' || result.user.role === 'TERRITORY_DISTRIBUTOR' ? '/tm/warehouse' : '/admin/dashboard')
     } catch (error) {
       const message = getApiErrorMessage(error, 'Unable to log in right now.')
       const code = getApiErrorCode(error)
@@ -368,7 +368,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
     try {
       const result = await registerPortalAccount({
         ...values,
-        warehouseName: values.role === 'REGIONAL_MANAGER' ? values.warehouseName : undefined,
+        warehouseName: (values.role === 'REGIONAL_MANAGER' || values.role === 'TERRITORY_DISTRIBUTOR') ? values.warehouseName : undefined,
       })
 
       if (result.otpRequired) {
@@ -406,7 +406,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
       if (!isPortalUserRole(loginResult.user.role)) throw new Error('This website is available only for Admins and Territory Managers.')
       completeSession(loginResult.accessToken, loginResult.user)
       onClose()
-      navigate(loginResult.user.role === 'REGIONAL_MANAGER' ? '/tm/warehouse' : '/admin/dashboard')
+      navigate(loginResult.user.role === 'REGIONAL_MANAGER' || loginResult.user.role === 'TERRITORY_DISTRIBUTOR' ? '/tm/warehouse' : '/admin/dashboard')
     } catch (error) {
       setFeedback({ tone: 'error', message: getApiErrorMessage(error, 'Unable to verify OTP right now.') })
     } finally {
@@ -503,7 +503,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
                     <PortalSelect label="Role" icon={<Icon kind="shield" />} error={signupForm.formState.errors.role?.message} {...signupForm.register('role', { required: 'Role is required.' })}>
                       <option value="REGIONAL_MANAGER">Territory Manager</option>
                     </PortalSelect>
-                    {selectedRole === 'REGIONAL_MANAGER' ? (
+                    {selectedRole === 'REGIONAL_MANAGER' || selectedRole === 'TERRITORY_DISTRIBUTOR' ? (
                       <div className="space-y-4">
                         <PortalInput
                           label="Warehouse Name"
@@ -513,7 +513,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
                           helperText="If the warehouse matches a registered record, the territory will auto-fill."
                           {...signupForm.register('warehouseName', {
                             validate: (value) =>
-                              selectedRole !== 'REGIONAL_MANAGER' || value.trim()
+                              selectedRole !== 'REGIONAL_MANAGER' && selectedRole !== 'TERRITORY_DISTRIBUTOR' || value.trim()
                                 ? true
                                 : 'Warehouse name is required for Territory Managers.',
                             onBlur: () => {

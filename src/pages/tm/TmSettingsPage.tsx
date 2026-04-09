@@ -4,13 +4,15 @@ import { changePortalPassword } from '../../api/auth'
 import { getApiErrorMessage } from '../../api/client'
 import { TerritoryManagerPortalShell } from '../../components/TerritoryManagerPortalShell'
 import { useAuth } from '../../context/AuthContext'
+import { useTmGuard } from '../../hooks/useTmGuard'
 
 const surfaceClass =
   'rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]'
 
 export default function TmSettingsPage() {
   const navigate = useNavigate()
-  const { user, isAuthLoading, logout } = useAuth()
+  const { logout } = useAuth()
+  const { user, isUnauthorized } = useTmGuard()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
@@ -18,7 +20,7 @@ export default function TmSettingsPage() {
   const [feedback, setFeedback] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  if (!isAuthLoading && (!user || user.role !== 'REGIONAL_MANAGER')) {
+  if (isUnauthorized) {
     return <Navigate to="/" replace />
   }
 

@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { assignVehicleToWarehouse, fetchMyWarehouse, type TmWarehouse } from '../../api/tm'
 import { getApiErrorMessage } from '../../api/client'
 import { TerritoryManagerPortalShell } from '../../components/TerritoryManagerPortalShell'
-import { useAuth } from '../../context/AuthContext'
+import { useTmGuard } from '../../hooks/useTmGuard'
 import {
   AddInventoryModal,
   AddVehicleModal,
@@ -19,7 +19,7 @@ import {
 type WarehouseTab = 'inventory' | 'vehicles' | 'employees' | 'shops'
 
 export default function TmWarehousePage() {
-  const { user, isAuthLoading } = useAuth()
+  const { user, isUnauthorized } = useTmGuard()
   const [warehouse, setWarehouse] = useState<TmWarehouse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +30,7 @@ export default function TmWarehousePage() {
   const [vehicleAssignMessage, setVehicleAssignMessage] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<WarehouseTab>('inventory')
 
-  if (!isAuthLoading && (!user || user.role !== 'REGIONAL_MANAGER')) {
+  if (isUnauthorized) {
     return <Navigate to="/" replace />
   }
 

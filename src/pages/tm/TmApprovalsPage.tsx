@@ -13,7 +13,7 @@ import {
 } from '../../api/tm'
 import { getApiErrorMessage } from '../../api/client'
 import { TerritoryManagerPortalShell } from '../../components/TerritoryManagerPortalShell'
-import { useAuth } from '../../context/AuthContext'
+import { useTmGuard } from '../../hooks/useTmGuard'
 import { formatCurrency } from '../productsPage.helpers'
 
 const surfaceClass =
@@ -329,7 +329,7 @@ function ProcessOrderModal({
 }
 
 export default function TmApprovalsPage() {
-  const { user, isAuthLoading } = useAuth()
+  const { user, isUnauthorized } = useTmGuard()
   const [activeTab, setActiveTab] = useState<'orders' | 'users'>('orders')
   const [orders, setOrders] = useState<TmOrder[]>([])
   const [ordersLoading, setOrdersLoading] = useState(true)
@@ -343,7 +343,7 @@ export default function TmApprovalsPage() {
   const [rejectTarget, setRejectTarget] = useState<TmPendingUser | null>(null)
   const [userMessage, setUserMessage] = useState<string | null>(null)
 
-  if (!isAuthLoading && (!user || user.role !== 'REGIONAL_MANAGER')) {
+  if (isUnauthorized) {
     return <Navigate to="/" replace />
   }
 

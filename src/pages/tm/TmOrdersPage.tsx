@@ -11,7 +11,7 @@ import {
 } from '../../api/tm'
 import { getApiErrorMessage } from '../../api/client'
 import { TerritoryManagerPortalShell } from '../../components/TerritoryManagerPortalShell'
-import { useAuth } from '../../context/AuthContext'
+import { useTmGuard } from '../../hooks/useTmGuard'
 import { formatCurrency } from '../productsPage.helpers'
 
 const surfaceClass =
@@ -293,7 +293,7 @@ function AssignModal({
 }
 
 export default function TmOrdersPage() {
-  const { user, isAuthLoading } = useAuth()
+  const { user, isUnauthorized } = useTmGuard()
   const [orders, setOrders] = useState<TmOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -305,7 +305,7 @@ export default function TmOrdersPage() {
   const [distributors, setDistributors] = useState<TmWarehouseUser[]>([])
   const [vehicles, setVehicles] = useState<TmWarehouseVehicle[]>([])
 
-  if (!isAuthLoading && (!user || user.role !== 'REGIONAL_MANAGER')) {
+  if (isUnauthorized) {
     return <Navigate to="/" replace />
   }
 

@@ -15,3 +15,22 @@ export async function fetchPortalActivities() {
   )
   return data
 }
+
+export interface OrderFeedbackEntry {
+  id: string
+  rating: number
+  comment: string | null
+  createdAt: string
+  order: {
+    id: string
+  }
+  shopOwner: {
+    firstName: string
+    lastName: string
+  }
+}
+
+export async function getMyTerritoryFeedback() {
+  const { data } = await apiClient.get<OrderFeedbackEntry[]>('/activities/feedback/my-territory')
+  return data
+}

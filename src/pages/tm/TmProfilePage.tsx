@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { TerritoryManagerPortalShell } from '../../components/TerritoryManagerPortalShell'
-import { useAuth } from '../../context/AuthContext'
+import { useTmGuard } from '../../hooks/useTmGuard'
 
 const surfaceClass =
   'rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]'
@@ -15,9 +15,9 @@ function formatDate(value: string | null) {
 }
 
 export default function TmProfilePage() {
-  const { user, isAuthLoading } = useAuth()
+  const { user, isUnauthorized } = useTmGuard()
 
-  if (!isAuthLoading && (!user || user.role !== 'REGIONAL_MANAGER')) {
+  if (isUnauthorized) {
     return <Navigate to="/" replace />
   }
 
