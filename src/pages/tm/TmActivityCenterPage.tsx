@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Star } from 'lucide-react'
-import { fetchPortalActivities, getMyTerritoryFeedback, type OrderFeedbackEntry, type PortalActivityEntry } from '../../api/activity'
+import { fetchPortalActivities, getMyTerritoryFeedback, getMyTerritoryTextFeedback, type OrderFeedbackEntry, type TextFeedbackEntry, type PortalActivityEntry } from '../../api/activity'
 import { getApiErrorMessage } from '../../api/client'
 import { TerritoryManagerPortalShell } from '../../components/TerritoryManagerPortalShell'
 import { useTmGuard } from '../../hooks/useTmGuard'
@@ -58,6 +58,7 @@ export default function TmActivityCenterPage() {
   const { user, isUnauthorized } = useTmGuard()
   const [activities, setActivities] = useState<PortalActivityEntry[]>([])
   const [feedbacks, setFeedbacks] = useState<OrderFeedbackEntry[]>([])
+  const [textFeedbacks, setTextFeedbacks] = useState<TextFeedbackEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -66,11 +67,13 @@ export default function TmActivityCenterPage() {
   useEffect(() => {
     Promise.all([
       fetchPortalActivities(),
-      getMyTerritoryFeedback()
+      getMyTerritoryFeedback(),
+      getMyTerritoryTextFeedback(),
     ])
-      .then(([activitiesResponse, feedbackResponse]) => {
+      .then(([activitiesResponse, feedbackResponse, textFeedbackResponse]) => {
         setActivities(activitiesResponse.activities)
         setFeedbacks(feedbackResponse)
+        setTextFeedbacks(textFeedbackResponse)
       })
       .catch((requestError) => setError(getApiErrorMessage(requestError)))
       .finally(() => setLoading(false))
@@ -115,12 +118,12 @@ export default function TmActivityCenterPage() {
       </div>
 
       {/* ── Shop Feedback Cards ─────────────────────────────────────────────── */}
-      {feedbacks.length > 0 && (
+      {(feedbacks.length > 0 || textFeedbacks.length > 0) && (
         <div className="mt-8 mb-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-bold text-[#4d3020]">Shop Owner Feedback</h2>
             <span className="rounded-full bg-[#f0d070] px-3 py-1 text-sm font-bold text-[#7a5a00]">
-              {feedbacks.length} Total
+              {feedbacks.length + textFeedbacks.length} Total
             </span>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -147,6 +150,26 @@ export default function TmActivityCenterPage() {
                     "{f.comment}"
                   </p>
                 )}
+              </div>
+            ))}
+            {textFeedbacks.map((f) => (
+              <div key={f.id} className="flex flex-col gap-3 rounded-2xl bg-slate-700 p-5 shadow-lg border border-slate-600">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-slate-100">
+                      {f.firstName} {f.lastName} {f.shopName && `(${f.shopName})`}
+                    </p>
+                    <p className="mt-0.5 text-xs text-sky-400 font-semibold uppercase">
+                      General Feedback
+                    </p>
+                  </div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                    {formatTimestamp(f.createdAt)}
+                  </p>
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-slate-300 italic">
+                  "{f.message}"
+                </p>
               </div>
             ))}
           </div>

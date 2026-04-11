@@ -34,3 +34,19 @@ export async function getMyTerritoryFeedback() {
   const { data } = await apiClient.get<OrderFeedbackEntry[]>('/activities/feedback/my-territory')
   return data
 }
+
+export interface TextFeedbackEntry {
+  id: string
+  userId: string
+  message: string
+  status: string
+  createdAt: string
+  firstName: string
+  lastName: string
+  shopName: string | null
+}
+
+export async function getMyTerritoryTextFeedback() {
+  const { data } = await apiClient.get<TextFeedbackEntry[]>('/activities/text-feedback/my-territory')
+  return data
+}
