@@ -51,20 +51,20 @@ const dashboardModules = [
     route: '/admin/warehouses',
   },
   {
-    badge: 'Fleet',
-    title: 'Assign Vehicles',
-    description: 'View all registered vehicles, their warehouse links, and dispatch capacity.',
-    action: 'Open fleet assignments',
+    badge: 'Field Ops',
+    title: 'Field Operations Monitoring',
+    description: 'Track field agents, active routes, and live operational coverage.',
+    action: 'Open field monitoring',
     className: 'bg-gradient-to-br from-[#5f7ea4] via-[#547291] to-[#47617d]',
-    route: '/admin/warehouses',
+    route: '/admin/field-monitoring',
   },
   {
     badge: 'Campaigns',
-    title: 'Promotions',
+    title: 'Promotion Management',
     description: 'Manage offers, campaign visibility, and promotional activity.',
-    action: 'Open promotions',
+    action: 'Open promotion management',
     className: 'bg-gradient-to-br from-[#7a8a4a] via-[#6b7b3e] to-[#596832]',
-    route: null,
+    route: '/admin/promotion-management',
   },
 ]
 

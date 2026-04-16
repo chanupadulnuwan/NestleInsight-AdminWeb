@@ -15,6 +15,9 @@ import TmSettingsPage from './pages/tm/TmSettingsPage'
 import TmProfilePage from './pages/tm/TmProfilePage'
 import AdminProfilePage from './pages/AdminProfilePage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
+import PromotionManagement from './pages/PromotionManagement'
+import FieldMonitoring from './pages/FieldMonitoring'
+import FieldMonitoringEmployee from './pages/FieldMonitoringEmployee'
 
 // Roles that belong to the Territory Manager portal
 const TM_ROLES = ['REGIONAL_MANAGER', 'TERRITORY_DISTRIBUTOR']
@@ -45,6 +48,9 @@ export default function App() {
       <Route path="/admin/warehouses" element={<WarehousesPage />} />
       <Route path="/admin/profile" element={<AdminProfilePage />} />
       <Route path="/admin/settings" element={<AdminSettingsPage />} />
+      <Route path="/admin/promotion-management" element={<PromotionManagement />} />
+      <Route path="/admin/field-monitoring" element={<FieldMonitoring />} />
+      <Route path="/admin/field-monitoring/:userId" element={<FieldMonitoringEmployee />} />
 
       {/* Territory Manager routes */}
       <Route path="/tm/warehouse" element={<TmWarehousePage />} />
