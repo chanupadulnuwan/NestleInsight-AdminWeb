@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiClient, getApiErrorMessage } from '../api/client'
+import { getApiErrorMessage } from '../api/client'
 import {
   createPromotion,
   fetchPromotions,
