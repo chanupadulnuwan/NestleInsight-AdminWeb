@@ -31,7 +31,7 @@ export interface OrderFeedbackEntry {
 }
 
 export async function getMyTerritoryFeedback() {
-  const { data } = await apiClient.get<OrderFeedbackEntry[]>('/activity/feedback/my-territory')
+  const { data } = await apiClient.get<OrderFeedbackEntry[]>('/activities/feedback/my-territory')
   return data
 }
 

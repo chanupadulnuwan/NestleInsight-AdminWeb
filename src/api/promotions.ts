@@ -22,6 +22,8 @@ export interface PromotionRecord {
   createdBy: string
   createdAt: string
   updatedAt: string
+  eligibleProductIds?: string[]
+  eligibleTerritoryIds?: string[]
 }
 
 export interface PromotionPayload {

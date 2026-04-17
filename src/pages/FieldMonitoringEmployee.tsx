@@ -136,6 +136,35 @@ function RouteTimeline({ stops }: { stops: RouteStop[] }) {
                   Reason: <span className="font-semibold">{stop.reasonCode}</span>
                 </p>
               )}
+              {stop.photoUrls && stop.photoUrls.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-1.5 text-[0.65rem] font-bold uppercase tracking-wider text-[#a37d63]">
+                    Visual Evidence
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {stop.photoUrls.map((url, i) => (
+                      <a
+                        key={i}
+                        href={`${url}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group relative h-16 w-16 overflow-hidden rounded-lg border border-[#e6ccb8] bg-[#f8f5f1]"
+                      >
+                        <img
+                          src={`${url}`}
+                          alt="Shelf evidence"
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/20">
+                          <svg viewBox="0 0 24 24" className="h-4 w-4 text-white opacity-0 transition group-hover:opacity-100" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                          </svg>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </li>
         )

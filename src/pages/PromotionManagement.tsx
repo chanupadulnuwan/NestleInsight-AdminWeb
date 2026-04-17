@@ -146,23 +146,44 @@ function MultiSelect({ label, items, selected, onChange, id }: MultiSelectProps)
           {items.length === 0 ? (
             <p className="px-3 py-2 text-xs text-[#b8a090]">No items available</p>
           ) : (
-            items.map((item) => {
-              const checked = selected.includes(item.id)
-              return (
-                <label
-                  key={item.id}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-[#fff4e8]"
+            <>
+              {/* select all / deselect all toggle */}
+              <div
+                className="sticky top-0 z-10 border-b border-[#f5ede6] bg-[#fdfaf7] px-3 py-2"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selected.length === items.length) {
+                      onChange([])
+                    } else {
+                      onChange(items.map((i) => i.id))
+                    }
+                  }}
+                  className="text-xs font-bold text-[#8b5a3a] transition hover:text-[#73492f]"
                 >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggle(item.id)}
-                    className="h-3.5 w-3.5 rounded accent-[#8b5a3a]"
-                  />
-                  <span className="text-[#5a4435]">{item.label}</span>
-                </label>
-              )
-            })
+                  {selected.length === items.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+
+              {items.map((item) => {
+                const checked = selected.includes(item.id)
+                return (
+                  <label
+                    key={item.id}
+                    className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-[#fff4e8]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggle(item.id)}
+                      className="h-3.5 w-3.5 rounded accent-[#8b5a3a]"
+                    />
+                    <span className="text-[#5a4435]">{item.label}</span>
+                  </label>
+                )
+              })}
+            </>
           )}
         </div>
       )}
@@ -285,8 +306,8 @@ export default function PromotionManagement() {
       minOrderValue: promotion.minOrderValue != null ? Number(promotion.minOrderValue) : null,
       usageLimit: promotion.usageLimit,
       perShopLimit: promotion.perShopLimit,
-      eligibleProductIds: [],
-      eligibleTerritoryIds: [],
+      eligibleProductIds: promotion.eligibleProductIds ?? [],
+      eligibleTerritoryIds: promotion.eligibleTerritoryIds ?? [],
     })
     setModalError(null)
     setIsModalOpen(true)

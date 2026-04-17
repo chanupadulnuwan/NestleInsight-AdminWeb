@@ -42,6 +42,7 @@ export interface RouteStop {
   completedAt: string | null
   skippedAt: string | null
   reasonCode: string | null
+  photoUrls: string[]
 }
 
 export interface SkipLogEntry {
