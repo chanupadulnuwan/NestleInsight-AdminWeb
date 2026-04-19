@@ -17,8 +17,6 @@ export interface PromotionRecord {
   discountValue: number
   minQuantity: number | null
   minOrderValue: number | null
-  usageLimit: number | null
-  perShopLimit: number | null
   createdBy: string
   createdAt: string
   updatedAt: string
@@ -38,8 +36,6 @@ export interface PromotionPayload {
   discountValue: number
   minQuantity?: number | null
   minOrderValue?: number | null
-  usageLimit?: number | null
-  perShopLimit?: number | null
   eligibleProductIds?: string[]
   eligibleTerritoryIds?: string[]
 }
@@ -57,4 +53,8 @@ export async function createPromotion(payload: PromotionPayload) {
 export async function updatePromotion(id: string, payload: Partial<PromotionPayload>) {
   const { data } = await apiClient.patch<PromotionRecord>(`/promotions/${id}`, payload)
   return data
+}
+
+export async function deletePromotion(id: string) {
+  await apiClient.delete(`/promotions/${id}`)
 }

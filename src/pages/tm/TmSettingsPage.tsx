@@ -56,6 +56,11 @@ export default function TmSettingsPage() {
     }
   }
 
+  const handleLogout = async () => {
+    await logout()
+    navigate('/', { replace: true })
+  }
+
   return (
     <TerritoryManagerPortalShell
       user={user}
@@ -157,7 +162,7 @@ export default function TmSettingsPage() {
             </button>
             <button
               type="button"
-              onClick={() => void logout()}
+              onClick={() => void handleLogout()}
               className="rounded-[1.35rem] border border-[#e8c7b3] bg-[#fff3ea] px-4 py-4 text-left transition duration-300 hover:border-[#d8a988] hover:bg-[#ffecdf]"
             >
               <p className="text-sm font-semibold text-[#8a6c58]">Session</p>

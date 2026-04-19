@@ -115,6 +115,7 @@ export interface TmOrderProcessingPreview {
   orderCode: string
   shopName: string
   currentTotal: number
+  discountedTotal: number
   availableTotal: number
   allItemsAvailable: boolean
   deliveryDueAt: string

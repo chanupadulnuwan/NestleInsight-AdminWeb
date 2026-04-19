@@ -204,6 +204,9 @@ function ProcessOrderModal({
                 </p>
                 <p className="mt-2 text-sm">
                   Current total: {formatCurrency(preview.currentTotal)}
+                  {preview.discountedTotal < preview.currentTotal
+                    ? ` · Discounted total: ${formatCurrency(preview.discountedTotal)}`
+                    : ''}
                   {!preview.allItemsAvailable ? ` · Available total: ${formatCurrency(preview.availableTotal)}` : ''}
                 </p>
                 <p className="mt-1 text-sm">
@@ -343,6 +346,11 @@ export default function TmApprovalsPage() {
   const [rejectTarget, setRejectTarget] = useState<TmPendingUser | null>(null)
   const [userMessage, setUserMessage] = useState<string | null>(null)
 
+  useEffect(() => {
+    loadOrders()
+    loadUsers()
+  }, [])
+
   if (isUnauthorized) {
     return <Navigate to="/" replace />
   }
@@ -367,15 +375,8 @@ export default function TmApprovalsPage() {
       .finally(() => setUsersLoading(false))
   }
 
-  useEffect(() => {
-    loadOrders()
-    loadUsers()
-  }, [])
-
   const handleApproveUser = async (userId: string) => {
     setApprovingUserId(userId)
-    setUserMessage(null)
-
     try {
       const response = await approveTmUser(userId)
       setUserMessage(response.message)
@@ -396,7 +397,7 @@ export default function TmApprovalsPage() {
       user={user}
       breadcrumb="Territory Manager / Approvals"
       title="Approvals"
-      description="Review pending account requests under your warehouse and process newly placed shop-owner orders with stock-aware delivery decisions."
+      description="Review pending account requests or process newly placed shop-owner orders."
       pendingCounts={{ approvals: orders.length + pendingUsers.length }}
     >
       <div className="grid gap-4 md:grid-cols-2">
@@ -420,7 +421,7 @@ export default function TmApprovalsPage() {
         </div>
       </div>
 
-      <div className="flex gap-2 border-b border-[#ebdfd5] pb-1">
+      <div className="flex gap-2 border-b border-[#ebdfd5] pb-1 mt-6">
         {([
           { key: 'orders', label: 'Order Processing', count: orders.length },
           { key: 'users', label: 'Account Approvals', count: pendingUsers.length },
@@ -445,7 +446,7 @@ export default function TmApprovalsPage() {
       </div>
 
       {activeTab === 'orders' ? (
-        <div className={surfaceClass}>
+        <div className={`mt-4 ${surfaceClass}`}>
           {orderMessage ? (
             <p className="border-b border-[#dbe7cf] bg-[#f3fbef] px-5 py-3 text-sm font-medium text-[#4d6c45]">
               {orderMessage}
@@ -515,7 +516,7 @@ export default function TmApprovalsPage() {
       ) : null}
 
       {activeTab === 'users' ? (
-        <div className={surfaceClass}>
+        <div className={`mt-4 ${surfaceClass}`}>
           {userMessage ? (
             <p className="border-b border-[#ebdfd5] px-5 py-3 text-sm text-[#8b5a3a]">
               {userMessage}

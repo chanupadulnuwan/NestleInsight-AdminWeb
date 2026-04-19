@@ -16,6 +16,36 @@ export async function fetchPortalActivities() {
   return data
 }
 
+export async function reviewRouteDeliveryApprovalRequest(
+  approvalRequestId: string,
+  payload: {
+    decision: 'APPROVED' | 'REJECTED'
+    notes?: string
+  },
+) {
+  const { data } = await apiClient.patch<{
+    message: string
+    pin?: string
+    pinExpiresAt?: string | null
+  }>(`/sales-routes/approval-requests/${approvalRequestId}/review`, payload)
+  return data
+}
+
+export async function reviewRouteLoadRequest(
+  loadRequestId: string,
+  payload: {
+    decision: 'APPROVED' | 'REJECTED'
+    notes?: string
+  },
+) {
+  const { data } = await apiClient.patch<{
+    message: string
+    startPin?: string
+    pinExpiresAt?: string | null
+  }>(`/sales-routes/load-requests/${loadRequestId}/review`, payload)
+  return data
+}
+
 export interface OrderFeedbackEntry {
   id: string
   rating: number

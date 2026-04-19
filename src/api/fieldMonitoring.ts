@@ -35,8 +35,13 @@ export interface RouteStop {
   sequence: number
   outletId: string
   outletName: string
+  outletAddress: string | null
+  latitude: number | null
+  longitude: number | null
   purpose: string
   status: string
+  etaMinutes: number | null
+  distanceKm: number | null
   durationMinutes: number | null
   arrivedAt: string | null
   completedAt: string | null
@@ -69,7 +74,9 @@ export interface DailyReportSummary {
   repComments: string | null
   routeSummary: Record<string, unknown> | null
   visitSummary: Record<string, unknown> | null
+  osaSummary: Record<string, unknown> | null
   deliverySummary: Record<string, unknown> | null
+  returnSummary: Record<string, unknown> | null
   incidentSummary: Record<string, unknown> | null
 }
 

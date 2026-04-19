@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../api/client'
 import {
   createPromotion,
+  deletePromotion,
   fetchPromotions,
   updatePromotion,
   type DiscountType,
@@ -80,8 +81,6 @@ const EMPTY_FORM: PromotionPayload = {
   discountValue: 0,
   minQuantity: null,
   minOrderValue: null,
-  usageLimit: null,
-  perShopLimit: null,
   eligibleProductIds: [],
   eligibleTerritoryIds: [],
 }
@@ -242,6 +241,7 @@ export default function PromotionManagement() {
 
   // status action
   const [statusActionId, setStatusActionId] = useState<string | null>(null)
+  const [deleteActionId, setDeleteActionId] = useState<string | null>(null)
 
   // toast
   const [toast, setToast] = useState<ToastState | null>(null)
@@ -304,8 +304,6 @@ export default function PromotionManagement() {
       discountValue: Number(promotion.discountValue),
       minQuantity: promotion.minQuantity,
       minOrderValue: promotion.minOrderValue != null ? Number(promotion.minOrderValue) : null,
-      usageLimit: promotion.usageLimit,
-      perShopLimit: promotion.perShopLimit,
       eligibleProductIds: promotion.eligibleProductIds ?? [],
       eligibleTerritoryIds: promotion.eligibleTerritoryIds ?? [],
     })
@@ -338,8 +336,6 @@ export default function PromotionManagement() {
       discountValue: Number(form.discountValue),
       minQuantity: form.minQuantity ? Number(form.minQuantity) : null,
       minOrderValue: form.minOrderValue != null ? Number(form.minOrderValue) : null,
-      usageLimit: form.usageLimit ? Number(form.usageLimit) : null,
-      perShopLimit: form.perShopLimit ? Number(form.perShopLimit) : null,
     }
 
     try {
@@ -371,6 +367,27 @@ export default function PromotionManagement() {
       showToast(getApiErrorMessage(err, 'Status update failed.'), 'error')
     } finally {
       setStatusActionId(null)
+    }
+  }
+
+  async function handleDelete(promotion: PromotionRecord) {
+    const confirmed = window.confirm(
+      `Delete "${promotion.name}" permanently? This will remove it from admin and the shop owner promotion tab.`,
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setDeleteActionId(promotion.id)
+    try {
+      await deletePromotion(promotion.id)
+      showToast('Promotion deleted successfully.')
+      await loadPromotions()
+    } catch (err) {
+      showToast(getApiErrorMessage(err, 'Delete failed.'), 'error')
+    } finally {
+      setDeleteActionId(null)
     }
   }
 
@@ -564,6 +581,7 @@ export default function PromotionManagement() {
                   <tbody>
                     {promotions.map((promo, idx) => {
                       const isWorking = statusActionId === promo.id
+                      const isDeleting = deleteActionId === promo.id
                       const isActive = promo.status === 'active'
                       return (
                         <tr
@@ -606,8 +624,9 @@ export default function PromotionManagement() {
                               <button
                                 id={`pm-edit-${promo.id}`}
                                 type="button"
+                                disabled={isDeleting}
                                 onClick={() => openEdit(promo)}
-                                className="rounded-[0.65rem] border border-[#d7baa3] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#6e4d3b] transition duration-200 hover:border-[#c9976f] hover:text-[#4d3020]"
+                                className="rounded-[0.65rem] border border-[#d7baa3] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#6e4d3b] transition duration-200 hover:border-[#c9976f] hover:text-[#4d3020] disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 Edit
                               </button>
@@ -615,7 +634,7 @@ export default function PromotionManagement() {
                                 <button
                                   id={`pm-toggle-${promo.id}`}
                                   type="button"
-                                  disabled={isWorking}
+                                  disabled={isWorking || isDeleting}
                                   onClick={() =>
                                     void handleStatusChange(
                                       promo.id,
@@ -631,6 +650,15 @@ export default function PromotionManagement() {
                                   {isWorking ? '…' : isActive ? 'Deactivate' : 'Activate'}
                                 </button>
                               )}
+                              <button
+                                id={`pm-delete-${promo.id}`}
+                                type="button"
+                                disabled={isDeleting || isWorking}
+                                onClick={() => void handleDelete(promo)}
+                                className="rounded-[0.65rem] bg-[#fef2f2] px-2.5 py-1.5 text-xs font-semibold text-[#b91c1c] transition duration-200 hover:bg-[#fee2e2] disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {isDeleting ? 'Deleting…' : 'Delete'}
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -826,36 +854,6 @@ export default function PromotionManagement() {
                     value={form.minOrderValue ?? ''}
                     onChange={(e) =>
                       setField('minOrderValue', e.target.value ? Number(e.target.value) : null)
-                    }
-                    placeholder="—"
-                    className={inputCls}
-                  />
-                </Field>
-
-                {/* usage limit */}
-                <Field label="Usage Limit (optional)" id="pm-usage-limit">
-                  <input
-                    id="pm-usage-limit"
-                    type="number"
-                    min={1}
-                    value={form.usageLimit ?? ''}
-                    onChange={(e) =>
-                      setField('usageLimit', e.target.value ? Number(e.target.value) : null)
-                    }
-                    placeholder="—"
-                    className={inputCls}
-                  />
-                </Field>
-
-                {/* per shop limit */}
-                <Field label="Per Shop Limit (optional)" id="pm-per-shop">
-                  <input
-                    id="pm-per-shop"
-                    type="number"
-                    min={1}
-                    value={form.perShopLimit ?? ''}
-                    onChange={(e) =>
-                      setField('perShopLimit', e.target.value ? Number(e.target.value) : null)
                     }
                     placeholder="—"
                     className={inputCls}

@@ -1,13 +1,35 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Star } from 'lucide-react'
-import { fetchPortalActivities, getMyTerritoryFeedback, getMyTerritoryTextFeedback, type OrderFeedbackEntry, type TextFeedbackEntry, type PortalActivityEntry } from '../../api/activity'
+import {
+  fetchPortalActivities,
+  getMyTerritoryFeedback,
+  getMyTerritoryTextFeedback,
+  reviewRouteDeliveryApprovalRequest,
+  reviewRouteLoadRequest,
+  type OrderFeedbackEntry,
+  type TextFeedbackEntry,
+  type PortalActivityEntry,
+} from '../../api/activity'
 import { getApiErrorMessage } from '../../api/client'
 import { TerritoryManagerPortalShell } from '../../components/TerritoryManagerPortalShell'
 import { useTmGuard } from '../../hooks/useTmGuard'
 
 const surfaceClass =
   'rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]'
+
+type ApprovalResolution = {
+  decision: 'APPROVED' | 'REJECTED'
+  message: string
+  pin?: string
+  pinExpiresAt?: string | null
+}
+
+type ApprovalActivityReference = {
+  kind: 'delivery' | 'load'
+  id: string
+  status: 'pending' | 'resolved'
+}
 
 function activityTone(type: string) {
   if (type === 'ORDER_FEEDBACK') {
@@ -22,13 +44,7 @@ function activityTone(type: string) {
   if (type.includes('FEEDBACK')) {
     return 'border-[#b8d4e8] bg-[#f0f7fc] text-[#2e6b99]'
   }
-  if (type.includes('LOGOUT')) {
-    return 'border-[#d7c5b6] bg-[#fff8f2] text-[#8b5a3a]'
-  }
-  if (type.includes('LOGIN')) {
-    return 'border-[#d9d0f0] bg-[#f7f3ff] text-[#6b4ca0]'
-  }
-  if (type.includes('PENDING') || type.includes('APPROVED') || type.includes('ORDER_')) {
+  if (type.includes('ROUTE_') || type.includes('PENDING') || type.includes('APPROVED') || type.includes('ORDER_')) {
     return 'border-[#d7baa3] bg-[#fff8f2] text-[#8b5a3a]'
   }
   return 'border-[#ebdfd5] bg-[#fff9f5] text-[#7f6657]'
@@ -53,14 +69,86 @@ function StarRatingDark({ rating }: { rating: number }) {
   )
 }
 
+function getApprovalTarget(activity: PortalActivityEntry) {
+  if (activity.type === 'ROUTE_DELIVERY_APPROVAL_PENDING') {
+    const approvalRequestId = activity.metadata?.approvalRequestId
+    return approvalRequestId ? { kind: 'delivery' as const, id: String(approvalRequestId) } : null
+  }
+  if (activity.type === 'ROUTE_LOAD_REQUEST_PENDING') {
+    const loadRequestId = activity.metadata?.loadRequestId
+    return loadRequestId ? { kind: 'load' as const, id: String(loadRequestId) } : null
+  }
+  return null
+}
+
+function getApprovalActivityReference(
+  activity: PortalActivityEntry,
+): ApprovalActivityReference | null {
+  const approvalRequestId = activity.metadata?.approvalRequestId
+  const loadRequestId = activity.metadata?.loadRequestId
+
+  if (
+    activity.type === 'ROUTE_DELIVERY_APPROVAL_PENDING' &&
+    approvalRequestId
+  ) {
+    return {
+      kind: 'delivery',
+      id: String(approvalRequestId),
+      status: 'pending',
+    }
+  }
+
+  if (
+    [
+      'ROUTE_DELIVERY_APPROVAL_REVIEWED',
+      'ROUTE_DELIVERY_APPROVAL_APPROVED',
+      'ROUTE_DELIVERY_APPROVAL_REJECTED',
+      'ROUTE_DELIVERY_APPROVAL_PIN_CONFIRMED',
+    ].includes(activity.type) &&
+    approvalRequestId
+  ) {
+    return {
+      kind: 'delivery',
+      id: String(approvalRequestId),
+      status: 'resolved',
+    }
+  }
+
+  if (activity.type === 'ROUTE_LOAD_REQUEST_PENDING' && loadRequestId) {
+    return {
+      kind: 'load',
+      id: String(loadRequestId),
+      status: 'pending',
+    }
+  }
+
+  if (
+    [
+      'ROUTE_LOAD_REQUEST_REVIEWED',
+      'ROUTE_LOAD_REQUEST_APPROVED',
+      'ROUTE_LOAD_REQUEST_REJECTED',
+    ].includes(activity.type) &&
+    loadRequestId
+  ) {
+    return {
+      kind: 'load',
+      id: String(loadRequestId),
+      status: 'resolved',
+    }
+  }
+
+  return null
+}
+
 export default function TmActivityCenterPage() {
-  // ── FIXED: use useTmGuard instead of inline role check ──────────────────────
   const { user, isUnauthorized } = useTmGuard()
   const [activities, setActivities] = useState<PortalActivityEntry[]>([])
   const [feedbacks, setFeedbacks] = useState<OrderFeedbackEntry[]>([])
   const [textFeedbacks, setTextFeedbacks] = useState<TextFeedbackEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actioningId, setActioningId] = useState<string | null>(null)
+  const [resolutionByActivityId, setResolutionByActivityId] = useState<Record<string, ApprovalResolution>>({})
 
   if (isUnauthorized) return <Navigate to="/" replace />
 
@@ -79,20 +167,115 @@ export default function TmActivityCenterPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const actionableActivities = useMemo(
+    () => {
+      const sortedActivities = [...activities].sort(
+        (left, right) =>
+          new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+      )
+      const latestActivityByApprovalKey = new Map<
+        string,
+        { activity: PortalActivityEntry; status: 'pending' | 'resolved' }
+      >()
+
+      for (const activity of sortedActivities) {
+        const reference = getApprovalActivityReference(activity)
+        if (!reference) {
+          continue
+        }
+
+        const approvalKey = `${reference.kind}:${reference.id}`
+        if (!latestActivityByApprovalKey.has(approvalKey)) {
+          latestActivityByApprovalKey.set(approvalKey, {
+            activity,
+            status: reference.status,
+          })
+        }
+      }
+
+      return Array.from(latestActivityByApprovalKey.values())
+        .filter(({ status }) => status === 'pending')
+        .map(({ activity }) => activity)
+    },
+    [activities],
+  )
+
+  const generalActivities = useMemo(
+    () =>
+      activities.filter((activity) => {
+        const isApprovalAction = getApprovalTarget(activity) !== null
+        return !isApprovalAction && activity.type !== 'ORDER_FEEDBACK'
+      }),
+    [activities],
+  )
+
   const groupedHighlights = useMemo(() => {
     return {
       total: activities.length,
+      routeApprovals: actionableActivities.length,
       stockAlerts: activities.filter(
         (item) => item.type.includes('LOW_STOCK') || item.type.includes('REFILL'),
       ).length,
       completedOrders: activities.filter((item) => item.type.includes('ORDER_COMPLETED')).length,
-      signIns: activities.filter((item) => item.type === 'LOGIN').length,
     }
-  }, [activities])
+  }, [actionableActivities.length, activities])
 
-  const filteredActivities = useMemo(() =>
-    activities.filter(a => a.type !== 'ORDER_FEEDBACK'),
-  [activities])
+  const handleReview = async (
+    activity: PortalActivityEntry,
+    decision: 'APPROVED' | 'REJECTED',
+  ) => {
+    const target = getApprovalTarget(activity)
+    if (!target) {
+      return
+    }
+
+    setActioningId(activity.id)
+    setError(null)
+
+    try {
+      if (target.kind === 'delivery') {
+        const response = await reviewRouteDeliveryApprovalRequest(target.id, {
+          decision,
+          notes:
+            decision === 'REJECTED'
+              ? 'Rejected from Activity Center.'
+              : 'Approved from Activity Center.',
+        })
+
+        setResolutionByActivityId((current) => ({
+          ...current,
+          [activity.id]: {
+            decision,
+            message: response.message,
+            pin: response.pin,
+            pinExpiresAt: response.pinExpiresAt ?? null,
+          },
+        }))
+      } else {
+        const response = await reviewRouteLoadRequest(target.id, {
+          decision,
+          notes:
+            decision === 'REJECTED'
+              ? 'Rejected from Activity Center.'
+              : 'Approved from Activity Center.',
+        })
+
+        setResolutionByActivityId((current) => ({
+          ...current,
+          [activity.id]: {
+            decision,
+            message: response.message,
+            pin: response.startPin,
+            pinExpiresAt: response.pinExpiresAt ?? null,
+          },
+        }))
+      }
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError))
+    } finally {
+      setActioningId(null)
+    }
+  }
 
   if (!user) return null
 
@@ -101,14 +284,15 @@ export default function TmActivityCenterPage() {
       user={user}
       breadcrumb="Territory Manager / Activity Center"
       title="Activity Center"
-      description="Track warehouse alerts, account updates, completed orders, and your own sign-in and sign-out activity in one place."
+      description="Review route start approvals, warehouse alerts, customer feedback, and general territory activity in one place."
+      pendingCounts={{ approvals: actionableActivities.length }}
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ['All activity', groupedHighlights.total],
+          ['Route approvals', groupedHighlights.routeApprovals],
           ['Refill alerts', groupedHighlights.stockAlerts],
           ['Completed orders', groupedHighlights.completedOrders],
-          ['Sign-ins', groupedHighlights.signIns],
         ].map(([label, value]) => (
           <div key={String(label)} className="rounded-[1.2rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
             <p className="text-sm font-semibold text-[#8a6c58]">{label}</p>
@@ -117,7 +301,99 @@ export default function TmActivityCenterPage() {
         ))}
       </div>
 
-      {/* ── Shop Feedback Cards ─────────────────────────────────────────────── */}
+      <div className="mt-8">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-[#4d3020]">Route Approval Queue</h2>
+          <span className="rounded-full bg-[#f2e2d4] px-3 py-1 text-sm font-bold text-[#8b5a3a]">
+            {actionableActivities.length} Pending
+          </span>
+        </div>
+        <div className={surfaceClass}>
+          {loading ? (
+            <p className="px-5 py-10 text-center text-sm text-[#7f6657]">Loading approval queue...</p>
+          ) : null}
+          {error ? (
+            <p className="px-5 py-6 text-center text-sm text-red-600">{error}</p>
+          ) : null}
+          {!loading ? (
+            <div className="flex flex-col gap-4 px-5 py-5">
+              {actionableActivities.length === 0 ? (
+                <div className="rounded-[1.3rem] border border-dashed border-[#d9c9bb] bg-[#fffaf7] px-5 py-8 text-center text-sm text-[#7f6657]">
+                  No route approvals are waiting right now.
+                </div>
+              ) : null}
+              {actionableActivities.map((activity) => {
+                const resolution = resolutionByActivityId[activity.id]
+                const isBusy = actioningId === activity.id
+
+                return (
+                  <article
+                    key={activity.id}
+                    className="rounded-[1.3rem] border border-[#eee2d7] bg-[#fffaf7] px-5 py-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <p className="text-lg font-semibold text-[#4d3020]">{activity.title}</p>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#7f6657]">
+                          {activity.message}
+                        </p>
+                      </div>
+                      <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${activityTone(activity.type)}`}>
+                        {activity.type.replaceAll('_', ' ')}
+                      </span>
+                    </div>
+
+                    {resolution ? (
+                      <div
+                        className={[
+                          'mt-4 rounded-[1.1rem] border px-4 py-3 text-sm',
+                          resolution.decision === 'APPROVED'
+                            ? 'border-[#cfe2c8] bg-[#f3fbef] text-[#4d6c45]'
+                            : 'border-[#f0d5d1] bg-[#fff3f2] text-[#9b4b46]',
+                        ].join(' ')}
+                      >
+                        <p className="font-semibold">{resolution.message}</p>
+                        {resolution.pin ? (
+                          <p className="mt-2">
+                            PIN: <span className="font-mono font-bold">{resolution.pin}</span>
+                            {resolution.pinExpiresAt
+                              ? ` · Expires ${formatTimestamp(resolution.pinExpiresAt)}`
+                              : ''}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={() => void handleReview(activity, 'APPROVED')}
+                          disabled={isBusy}
+                          className="rounded-[1rem] bg-[#8b5a3a] px-4 py-2.5 text-sm font-semibold text-white transition duration-300 hover:bg-[#73492f] disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {isBusy ? 'Saving...' : 'Approve'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleReview(activity, 'REJECTED')}
+                          disabled={isBusy}
+                          className="rounded-[1rem] border border-[#e7c0bc] bg-[#fff0ef] px-4 py-2.5 text-sm font-semibold text-[#9b4b46] transition duration-300 hover:bg-[#ffe5e3] disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+
+                    <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-[#a37d63]">
+                      {formatTimestamp(activity.createdAt)}
+                    </p>
+                  </article>
+                )
+              })}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
       {(feedbacks.length > 0 || textFeedbacks.length > 0) && (
         <div className="mt-8 mb-6">
           <div className="mb-4 flex items-center justify-between">
@@ -153,13 +429,13 @@ export default function TmActivityCenterPage() {
               </div>
             ))}
             {textFeedbacks.map((f) => (
-              <div key={f.id} className="flex flex-col gap-3 rounded-2xl bg-slate-700 p-5 shadow-lg border border-slate-600">
+              <div key={f.id} className="flex flex-col gap-3 rounded-2xl border border-slate-600 bg-slate-700 p-5 shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-slate-100">
                       {f.firstName} {f.lastName} {f.shopName && `(${f.shopName})`}
                     </p>
-                    <p className="mt-0.5 text-xs text-sky-400 font-semibold uppercase">
+                    <p className="mt-0.5 text-xs font-semibold uppercase text-sky-400">
                       General Feedback
                     </p>
                   </div>
@@ -181,20 +457,17 @@ export default function TmActivityCenterPage() {
         {loading ? (
           <p className="px-5 py-10 text-center text-sm text-[#7f6657]">Loading activity...</p>
         ) : null}
-        {error ? (
-          <p className="px-5 py-10 text-center text-sm text-red-600">{error}</p>
-        ) : null}
-        {!loading && !error ? (
+        {!loading ? (
           <div className="flex flex-col gap-4 px-5 py-5">
-            {filteredActivities.length === 0 ? (
+            {generalActivities.length === 0 ? (
               <div className="rounded-[1.3rem] border border-dashed border-[#d9c9bb] bg-[#fffaf7] px-5 py-8 text-center text-sm text-[#7f6657]">
                 No activity recorded yet.
               </div>
             ) : null}
-            {filteredActivities.map((activity) => (
+            {generalActivities.map((activity) => (
               <article
                 key={activity.id}
-                className="rounded-[1.3rem] border px-5 py-4 border-[#eee2d7] bg-[#fffaf7]"
+                className="rounded-[1.3rem] border border-[#eee2d7] bg-[#fffaf7] px-5 py-4"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex-1">

@@ -71,6 +71,20 @@ function NavIcon({ section }: { section: TmSection | 'settings' | 'profile' }) {
   )
 }
 
+function getUserInitials(user: AuthUser) {
+  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`
+    .trim()
+    .toUpperCase()
+
+  return initials || user.username.charAt(0).toUpperCase()
+}
+
+function getPortalRoleLabel(user: AuthUser) {
+  return user.role === 'TERRITORY_DISTRIBUTOR'
+    ? 'Territory Distributor'
+    : 'Territory Manager'
+}
+
 export function TerritoryManagerPortalShell({
   user,
   breadcrumb,
@@ -96,6 +110,11 @@ export function TerritoryManagerPortalShell({
     [...mainNavItems, ...bottomNavItems].find((item) =>
       location.pathname.startsWith(item.path),
     )?.key
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/', { replace: true })
+  }
 
   return (
     <div className="min-h-screen bg-white text-[#1e130c]">
@@ -191,21 +210,24 @@ export function TerritoryManagerPortalShell({
 
             {/* User card */}
             <div className="mt-3 rounded-[1.5rem] border border-white/12 bg-white/6 px-4 py-4 text-left backdrop-blur-sm">
-              <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/tm/profile')}
+                className="flex w-full items-center gap-3 text-left"
+              >
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#d7965f] to-[#b86d35] text-sm font-bold text-white">
-                  {user.firstName.charAt(0).toUpperCase()}
-                  {user.lastName.charAt(0).toUpperCase()}
+                  {getUserInitials(user)}
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-[#fff6ee]">{user.username}</p>
                   <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[#dcc7b8]">
-                    Territory Manager
+                    {getPortalRoleLabel(user)}
                   </p>
                 </div>
-              </div>
+              </button>
               <button
                 type="button"
-                onClick={() => void logout()}
+                onClick={() => void handleLogout()}
                 className="mt-4 w-full rounded-[1rem] border border-white/12 bg-black/10 px-4 py-2.5 text-sm font-semibold text-[#fff6ee] transition duration-200 hover:bg-white/10"
               >
                 Log out

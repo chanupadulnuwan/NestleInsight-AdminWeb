@@ -51,14 +51,6 @@ const dashboardModules = [
     route: '/admin/warehouses',
   },
   {
-    badge: 'Live Monitoring',
-    title: 'Live Field Ops Dashboard',
-    description: 'Real-time visibility into field operations, active routes, and team status.',
-    action: 'Open live field ops dashboard',
-    className: 'bg-gradient-to-br from-[#5f95b8] via-[#567fa8] to-[#486b96]',
-    route: '/admin/field-ops',
-  },
-  {
     badge: 'Field Ops',
     title: 'Field Operations Monitoring',
     description: 'Track field agents, active routes, and live operational coverage.',
