@@ -11,6 +11,7 @@ import {
   type TmOrderProcessingPreview,
   type TmPendingUser,
 } from '../../api/tm'
+import { fetchPendingOutlets, reviewOutlet, type Outlet } from '../../api/outlets'
 import { getApiErrorMessage } from '../../api/client'
 import { TerritoryManagerPortalShell } from '../../components/TerritoryManagerPortalShell'
 import { useTmGuard } from '../../hooks/useTmGuard'
@@ -345,10 +346,16 @@ export default function TmApprovalsPage() {
   const [approvingUserId, setApprovingUserId] = useState<string | null>(null)
   const [rejectTarget, setRejectTarget] = useState<TmPendingUser | null>(null)
   const [userMessage, setUserMessage] = useState<string | null>(null)
+  const [pendingOutlets, setPendingOutlets] = useState<Outlet[]>([])
+  const [outletsLoading, setOutletsLoading] = useState(true)
+  const [outletsError, setOutletsError] = useState<string | null>(null)
+  const [reviewingOutletId, setReviewingOutletId] = useState<string | null>(null)
+  const [outletMessage, setOutletMessage] = useState<string | null>(null)
 
   useEffect(() => {
     loadOrders()
     loadUsers()
+    loadOutlets()
   }, [])
 
   if (isUnauthorized) {
@@ -375,6 +382,16 @@ export default function TmApprovalsPage() {
       .finally(() => setUsersLoading(false))
   }
 
+  const loadOutlets = () => {
+    setOutletsLoading(true)
+    setOutletsError(null)
+
+    fetchPendingOutlets()
+      .then((response) => setPendingOutlets(response.outlets))
+      .catch((requestError) => setOutletsError(getApiErrorMessage(requestError)))
+      .finally(() => setOutletsLoading(false))
+  }
+
   const handleApproveUser = async (userId: string) => {
     setApprovingUserId(userId)
     try {
@@ -388,6 +405,38 @@ export default function TmApprovalsPage() {
     }
   }
 
+  const handleApproveOutlet = async (outletId: string) => {
+    setReviewingOutletId(outletId)
+    try {
+      const response = await reviewOutlet(outletId, { decision: 'APPROVED' })
+      setOutletMessage(response.message)
+      loadOutlets()
+    } catch (requestError) {
+      setOutletMessage(getApiErrorMessage(requestError))
+    } finally {
+      setReviewingOutletId(null)
+    }
+  }
+
+  const handleRejectOutlet = async (outlet: Outlet) => {
+    const reason = window.prompt(`Reason for rejecting ${outlet.outletName}?`)
+    if (!reason?.trim()) return
+
+    setReviewingOutletId(outlet.id)
+    try {
+      const response = await reviewOutlet(outlet.id, {
+        decision: 'REJECTED',
+        rejectionReason: reason.trim(),
+      })
+      setOutletMessage(response.message)
+      loadOutlets()
+    } catch (requestError) {
+      setOutletMessage(getApiErrorMessage(requestError))
+    } finally {
+      setReviewingOutletId(null)
+    }
+  }
+
   if (!user) {
     return null
   }
@@ -398,7 +447,7 @@ export default function TmApprovalsPage() {
       breadcrumb="Territory Manager / Approvals"
       title="Approvals"
       description="Review pending account requests or process newly placed shop-owner orders."
-      pendingCounts={{ approvals: orders.length + pendingUsers.length }}
+      pendingCounts={{ approvals: orders.length + pendingUsers.length + pendingOutlets.length }}
     >
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-[1.6rem] border border-[#ebdfd5] bg-[#fff8f2] px-5 py-4">
@@ -414,9 +463,11 @@ export default function TmApprovalsPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#a37d63]">
             Pending Accounts
           </p>
-          <p className="mt-3 text-3xl font-bold text-[#4d3020]">{pendingUsers.length}</p>
+          <p className="mt-3 text-3xl font-bold text-[#4d3020]">
+            {pendingUsers.length + pendingOutlets.length}
+          </p>
           <p className="mt-2 text-sm text-[#7f6657]">
-            Shop owners and territory distributors stay pending until you approve them.
+            App accounts and sales-rep-created outlets stay pending until you approve them.
           </p>
         </div>
       </div>
@@ -424,7 +475,11 @@ export default function TmApprovalsPage() {
       <div className="flex gap-2 border-b border-[#ebdfd5] pb-1 mt-6">
         {([
           { key: 'orders', label: 'Order Processing', count: orders.length },
-          { key: 'users', label: 'Account Approvals', count: pendingUsers.length },
+          {
+            key: 'users',
+            label: 'Account Approvals',
+            count: pendingUsers.length + pendingOutlets.length,
+          },
         ] as const).map((tab) => (
           <button
             key={tab.key}
@@ -522,6 +577,11 @@ export default function TmApprovalsPage() {
               {userMessage}
             </p>
           ) : null}
+          {outletMessage ? (
+            <p className="border-b border-[#dbe7cf] bg-[#f3fbef] px-5 py-3 text-sm font-medium text-[#4d6c45]">
+              {outletMessage}
+            </p>
+          ) : null}
           {usersLoading ? (
             <p className="px-5 py-10 text-center text-sm text-[#7f6657]">Loading...</p>
           ) : null}
@@ -596,6 +656,87 @@ export default function TmApprovalsPage() {
               </table>
             </div>
           ) : null}
+
+          <div className="border-t border-[#ebdfd5]">
+            <div className="flex flex-col gap-1 px-5 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#a37d63]">
+                Sales Rep Created Shops
+              </p>
+              <p className="text-sm text-[#7f6657]">
+                New outlets registered in the field appear here before they become active.
+              </p>
+            </div>
+            {outletsLoading ? (
+              <p className="px-5 py-8 text-center text-sm text-[#7f6657]">Loading shops...</p>
+            ) : null}
+            {outletsError ? (
+              <p className="px-5 py-8 text-center text-sm text-red-600">{outletsError}</p>
+            ) : null}
+            {!outletsLoading && !outletsError ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-y border-[#ebdfd5] bg-[#fff8f2] text-xs uppercase tracking-wide text-[#8a6c58]">
+                      <th className="px-5 py-3 text-left">Shop</th>
+                      <th className="px-5 py-3 text-left">Owner</th>
+                      <th className="px-5 py-3 text-left">Contact</th>
+                      <th className="px-5 py-3 text-left">Registered</th>
+                      <th className="px-5 py-3 text-left">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingOutlets.map((outlet) => (
+                      <tr
+                        key={outlet.id}
+                        className="border-b border-[#f1e5db] last:border-0 hover:bg-[#fffaf7]"
+                      >
+                        <td className="px-5 py-3.5">
+                          <p className="font-semibold text-[#4d3020]">{outlet.outletName}</p>
+                          <p className="max-w-xs truncate text-xs text-[#8a6c58]">
+                            {outlet.address ?? 'No address added'}
+                          </p>
+                        </td>
+                        <td className="px-5 py-3.5 text-[#7f6657]">{outlet.ownerName}</td>
+                        <td className="px-5 py-3.5 text-[#7f6657]">
+                          {outlet.ownerPhone ?? 'No phone'}
+                        </td>
+                        <td className="px-5 py-3.5 text-[#7f6657]">
+                          {new Date(outlet.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void handleApproveOutlet(outlet.id)}
+                              disabled={reviewingOutletId === outlet.id}
+                              className="rounded-[1rem] bg-[#8b5a3a] px-3 py-2 text-xs font-semibold text-white transition duration-300 hover:bg-[#73492f] disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {reviewingOutletId === outlet.id ? 'Saving...' : 'Approve'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleRejectOutlet(outlet)}
+                              disabled={reviewingOutletId === outlet.id}
+                              className="rounded-[1rem] border border-[#e7c0bc] bg-[#fff0ef] px-3 py-2 text-xs font-semibold text-[#9b4b46] transition duration-300 hover:bg-[#ffe5e3] disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {pendingOutlets.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-5 py-8 text-center text-[#7f6657]">
+                          No sales-rep-created shops are waiting for approval.
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

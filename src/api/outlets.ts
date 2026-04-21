@@ -21,8 +21,16 @@ export interface Outlet {
 }
 
 export async function fetchPendingOutlets() {
-  const { data } = await apiClient.get<{ message: string; outlets: Outlet[] }>('/outlets/pending')
-  return data
+  const { data } = await apiClient.get<{ message?: string; outlets?: Outlet[] } | Outlet[]>(
+    '/outlets/pending',
+  )
+  if (Array.isArray(data)) {
+    return { message: 'Pending outlets loaded.', outlets: data }
+  }
+  return {
+    message: data.message ?? 'Pending outlets loaded.',
+    outlets: data.outlets ?? [],
+  }
 }
 
 export async function reviewOutlet(
@@ -32,9 +40,25 @@ export async function reviewOutlet(
     rejectionReason?: string
   },
 ) {
-  const { data } = await apiClient.patch<{ message: string; outlet: Outlet }>(
+  const { data } = await apiClient.patch<{ message?: string; outlet?: Outlet } | Outlet>(
     `/outlets/${outletId}/review`,
     payload,
   )
-  return data
+  if ('outletName' in data) {
+    return {
+      message:
+        payload.decision === 'APPROVED'
+          ? 'Outlet approved successfully.'
+          : 'Outlet rejected successfully.',
+      outlet: data,
+    }
+  }
+  return {
+    message:
+      data.message ??
+      (payload.decision === 'APPROVED'
+        ? 'Outlet approved successfully.'
+        : 'Outlet rejected successfully.'),
+    outlet: data.outlet,
+  }
 }
