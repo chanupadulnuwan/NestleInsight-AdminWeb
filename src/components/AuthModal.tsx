@@ -336,7 +336,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
     try {
       const result = await loginPortalAccount(values)
       if (!result.accessToken || !result.user) throw new Error('Login completed without a valid session.')
-      if (!isPortalUserRole(result.user.role)) throw new Error('This website is available only for Admins and Territory Managers.')
+      if (!isPortalUserRole(result.user.role)) throw new Error('This website is available only for Admins, Territory Managers, and Demand Planners.')
       completeSession(result.accessToken, result.user)
       onClose()
       navigate(result.user.role === 'REGIONAL_MANAGER' || result.user.role === 'TERRITORY_DISTRIBUTOR' ? '/tm/warehouse' : '/admin/dashboard')
@@ -368,7 +368,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
     try {
       const result = await registerPortalAccount({
         ...values,
-        warehouseName: (values.role === 'REGIONAL_MANAGER' || values.role === 'TERRITORY_DISTRIBUTOR') ? values.warehouseName : undefined,
+        warehouseName: values.role === 'REGIONAL_MANAGER' || values.role === 'TERRITORY_DISTRIBUTOR' ? values.warehouseName : undefined,
       })
 
       if (result.otpRequired) {
@@ -403,7 +403,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
       await verifyPortalOtp({ identifier: otpState.identifier, otp: values.otp })
       const loginResult = await loginPortalAccount({ identifier: otpState.identifier, password: otpState.password })
       if (!loginResult.accessToken || !loginResult.user) throw new Error('Your OTP was verified, but login could not be completed yet.')
-      if (!isPortalUserRole(loginResult.user.role)) throw new Error('This website is available only for Admins and Territory Managers.')
+      if (!isPortalUserRole(loginResult.user.role)) throw new Error('This website is available only for Admins, Territory Managers, and Demand Planners.')
       completeSession(loginResult.accessToken, loginResult.user)
       onClose()
       navigate(loginResult.user.role === 'REGIONAL_MANAGER' || loginResult.user.role === 'TERRITORY_DISTRIBUTOR' ? '/tm/warehouse' : '/admin/dashboard')
@@ -446,8 +446,8 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
           <div className="mx-auto flex max-w-[31rem] flex-col gap-6">
             {activeView === 'login' ? (
               <>
-                <AuthCardHeader title="Admin Portal" subtitle="Secure web access for distribution administrators and territory managers." />
-                <NoticeCard kind="shield">Signup and login for this site are available only for Admins and Territory Managers.</NoticeCard>
+                <AuthCardHeader title="Admin Portal" subtitle="Secure web access for administrators, territory managers, and demand planners." />
+                <NoticeCard kind="shield">Signup and login for this site are available only for Admins, Territory Managers, and Demand Planners.</NoticeCard>
                 {feedback ? <FeedbackBanner tone={feedback.tone} message={feedback.message} /> : null}
                 <form className="space-y-4" onSubmit={handlePortalLogin}>
                   <PortalInput
@@ -502,6 +502,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose }: Au
                   <div className="grid gap-4 sm:grid-cols-2">
                     <PortalSelect label="Role" icon={<Icon kind="shield" />} error={signupForm.formState.errors.role?.message} {...signupForm.register('role', { required: 'Role is required.' })}>
                       <option value="REGIONAL_MANAGER">Territory Manager</option>
+                      <option value="DEMAND_PLANNER">Demand Planner</option>
                     </PortalSelect>
                     {selectedRole === 'REGIONAL_MANAGER' || selectedRole === 'TERRITORY_DISTRIBUTOR' ? (
                       <div className="space-y-4">

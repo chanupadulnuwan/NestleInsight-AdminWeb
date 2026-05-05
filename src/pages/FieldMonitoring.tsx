@@ -71,6 +71,8 @@ export default function FieldMonitoring() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { user, isAuthLoading } = useAuth()
+  const canAccessFieldMonitoring =
+    user?.role === 'ADMIN' || user?.role === 'DEMAND_PLANNER'
 
   // filters
   const [date, setDate] = useState(searchParams.get('date') ?? todayIso())
@@ -124,7 +126,7 @@ export default function FieldMonitoring() {
     )
   }
 
-  if (!user || user.role !== 'ADMIN') {
+  if (!user || !canAccessFieldMonitoring) {
     navigate('/admin/dashboard', { replace: true })
     return null
   }

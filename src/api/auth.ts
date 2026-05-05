@@ -8,7 +8,11 @@ export type BackendRole =
   | 'DEMAND_PLANNER'
   | 'REGIONAL_MANAGER'
 
-export type WebPortalRole = 'ADMIN' | 'REGIONAL_MANAGER' | 'TERRITORY_DISTRIBUTOR'
+export type WebPortalRole =
+  | 'ADMIN'
+  | 'REGIONAL_MANAGER'
+  | 'TERRITORY_DISTRIBUTOR'
+  | 'DEMAND_PLANNER'
 export type AccountStatus = 'PENDING' | 'OTP_PENDING' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED'
 export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
@@ -67,7 +71,12 @@ export interface PortalSignupPayload {
 }
 
 export function isPortalUserRole(role?: string): role is WebPortalRole {
-  return role === 'ADMIN' || role === 'REGIONAL_MANAGER' || role === 'TERRITORY_DISTRIBUTOR'
+  return (
+    role === 'ADMIN' ||
+    role === 'REGIONAL_MANAGER' ||
+    role === 'TERRITORY_DISTRIBUTOR' ||
+    role === 'DEMAND_PLANNER'
+  )
 }
 
 export async function loginPortalAccount(payload: { identifier: string; password: string }) {

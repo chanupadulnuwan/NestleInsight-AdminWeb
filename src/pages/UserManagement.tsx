@@ -12,7 +12,12 @@ import {
 import { useAuth } from '../context/AuthContext'
 
 type AdminSection = 'dashboard' | 'approvals' | 'orders' | 'stocks'
-type ManageableRole = 'SHOP_OWNER' | 'TERRITORY_DISTRIBUTOR' | 'REGIONAL_MANAGER' | 'SALES_REP'
+type ManageableRole =
+  | 'SHOP_OWNER'
+  | 'TERRITORY_DISTRIBUTOR'
+  | 'REGIONAL_MANAGER'
+  | 'SALES_REP'
+  | 'DEMAND_PLANNER'
 type PendingAction = 'REJECT' | 'DEACTIVATE' | null
 
 const surfaceClassName =
@@ -31,6 +36,7 @@ const roleOptions: Array<{ value: 'ALL' | ManageableRole; label: string }> = [
   { value: 'TERRITORY_DISTRIBUTOR', label: 'Territory Distributors' },
   { value: 'REGIONAL_MANAGER', label: 'Territory Managers' },
   { value: 'SALES_REP', label: 'Sales Reps' },
+  { value: 'DEMAND_PLANNER', label: 'Demand Planners' },
 ]
 
 const roleLabels: Record<ManageableRole, string> = {
@@ -38,6 +44,7 @@ const roleLabels: Record<ManageableRole, string> = {
   TERRITORY_DISTRIBUTOR: 'Territory Distributors',
   REGIONAL_MANAGER: 'Territory Managers',
   SALES_REP: 'Sales Reps',
+  DEMAND_PLANNER: 'Demand Planners',
 }
 
 function formatPortalDate(value: string | null) {
@@ -50,7 +57,7 @@ function formatPortalDate(value: string | null) {
 }
 
 function formatRoleLabel(role: AuthUser['role']) {
-  if (role === 'SHOP_OWNER' || role === 'TERRITORY_DISTRIBUTOR' || role === 'REGIONAL_MANAGER' || role === 'SALES_REP') {
+  if (role === 'SHOP_OWNER' || role === 'TERRITORY_DISTRIBUTOR' || role === 'REGIONAL_MANAGER' || role === 'SALES_REP' || role === 'DEMAND_PLANNER') {
     return roleLabels[role]
   }
 

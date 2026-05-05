@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import type { AuthUser } from '../api/auth'
 import { getApiErrorMessage } from '../api/client'
+import DemandForecastExportSection from '../components/DemandForecastExportSection'
+import DemandForecastEngineSection from '../components/DemandForecastEngineSection'
 import { approvePendingUser, fetchPendingUsers, rejectPendingUser } from '../api/users'
 import { useAuth } from '../context/AuthContext'
 
-type AdminSection = 'dashboard' | 'approvals' | 'orders' | 'stocks'
+type AdminSection = 'dashboard' | 'approvals' | 'orders' | 'stocks' | 'exports' | 'forecast-engine'
 
 const surfaceClassName =
   'rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]'
@@ -16,6 +18,16 @@ const navigationItems: Array<{ key: AdminSection; label: string }> = [
   { key: 'orders', label: 'Orders' },
   { key: 'stocks', label: 'Stocks' },
 ]
+const DEMAND_PLANNER_NAVIGATION_ITEMS: Array<{ key: AdminSection; label: string }> = [
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'exports', label: 'Exports' },
+  { key: 'forecast-engine', label: 'Forecast Engine' },
+]
+
+const DEMAND_PLANNER_MODULE_ROUTES = new Set([
+  '/admin/field-monitoring',
+  '/admin/promotion-management',
+])
 
 const dashboardModules = [
   {
@@ -148,6 +160,29 @@ function NavGlyph({ name }: { name: AdminSection }) {
     )
   }
 
+  if (name === 'exports') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 4.5v9" />
+        <path d="m8.5 10.5 3.5 3.5 3.5-3.5" />
+        <path d="M4 17.5h16" />
+        <path d="M6.5 19.5h11" />
+      </svg>
+    )
+  }
+
+  if (name === 'forecast-engine') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M4 18.5h16" />
+        <path d="M6 15.5 10 11l3 2.5 5-7" />
+        <path d="M17 6.5h1.5V8" />
+        <path d="M6.5 5.5h4" />
+        <path d="M6.5 8.5h2" />
+      </svg>
+    )
+  }
+
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M12 3.5v2.1" />
@@ -178,17 +213,32 @@ export default function AdminDashboard() {
 
   const isAdmin = user?.role === 'ADMIN'
   const isRegionalManager = user?.role === 'REGIONAL_MANAGER'
+  const isDemandPlanner = user?.role === 'DEMAND_PLANNER'
   const isRegionalManagerApproved =
     isRegionalManager && user?.approvalStatus === 'APPROVED'
+  const isDemandPlannerApproved =
+    isDemandPlanner && user?.approvalStatus === 'APPROVED'
   const regionalManagerModules = dashboardModules.filter(
     (module) =>
       module.route === '/admin/territories' ||
       module.route === '/admin/warehouses',
   )
+  const demandPlannerModules = dashboardModules.filter((module) =>
+    DEMAND_PLANNER_MODULE_ROUTES.has(module.route),
+  )
+  const demandPlannerNavigationItems = isDemandPlannerApproved
+    ? DEMAND_PLANNER_NAVIGATION_ITEMS
+    : DEMAND_PLANNER_NAVIGATION_ITEMS.filter((item) => item.key === 'dashboard')
+  const visibleNavigationItems = isDemandPlanner
+    ? demandPlannerNavigationItems
+    : navigationItems
 
   const syncSection = (section: AdminSection) => {
-    setActiveSection(section)
-    setSearchParams(section === 'dashboard' ? {} : { section })
+    const nextSection = visibleNavigationItems.some((item) => item.key === section)
+      ? section
+      : 'dashboard'
+    setActiveSection(nextSection)
+    setSearchParams(nextSection === 'dashboard' ? {} : { section: nextSection })
   }
 
   const refreshPendingUsers = async () => {
@@ -215,12 +265,20 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const sectionParam = searchParams.get('section')
-    const nextSection = navigationItems.find((item) => item.key === sectionParam)?.key ?? 'dashboard'
+    const isKnownSection = visibleNavigationItems.some(
+      (item) => item.key === sectionParam,
+    )
+    const nextSection =
+      visibleNavigationItems.find((item) => item.key === sectionParam)?.key ?? 'dashboard'
 
     if (nextSection !== activeSection) {
       setActiveSection(nextSection)
     }
-  }, [activeSection, searchParams])
+
+    if (sectionParam && !isKnownSection) {
+      setSearchParams({}, { replace: true })
+    }
+  }, [activeSection, searchParams, setSearchParams, visibleNavigationItems])
 
   if (isAuthLoading) {
     return <div className="flex min-h-screen items-center justify-center bg-white text-[#6e5647]">Loading admin portal...</div>
@@ -289,7 +347,9 @@ export default function AdminDashboard() {
 
       setFeedback(
         refreshedUser.approvalStatus === 'APPROVED'
-          ? 'Your account approval is active. The territory workspace is ready.'
+          ? refreshedUser.role === 'DEMAND_PLANNER'
+            ? 'Your account approval is active. Field operations monitoring and promotion management are ready.'
+            : 'Your account approval is active. The territory workspace is ready.'
           : 'Your account status is still waiting for admin approval.',
       )
     } catch {
@@ -306,11 +366,15 @@ export default function AdminDashboard() {
         ? 'Admin Dashboard'
         : isRegionalManagerApproved
           ? 'Territory Manager Dashboard'
+          : isDemandPlannerApproved
+            ? 'Demand Planner Dashboard'
           : 'Account Status Dashboard',
       description: isAdmin
         ? 'Manage users, products, territories, warehouses, and vehicle assignments from one clean control center.'
         : isRegionalManagerApproved
           ? 'Open the territory and warehouse workspace from the same portal shell used by the admin team.'
+          : isDemandPlannerApproved
+            ? 'Open field operations monitoring and promotion management from one focused workspace.'
           : 'Your account has completed OTP verification and is now waiting for administrator approval.',
     },
     approvals: {
@@ -318,9 +382,11 @@ export default function AdminDashboard() {
       title: 'Approvals',
       description: isAdmin
         ? 'Review and action pending web portal requests for territory and regional teams.'
-        : isRegionalManagerApproved
+        : isRegionalManagerApproved || isDemandPlannerApproved
           ? 'Your web account approval is active.'
-          : 'Administrator approval is still required before the full territory workspace becomes active.',
+          : isDemandPlanner
+            ? 'Administrator approval is still required before field operations monitoring and promotion management become active.'
+            : 'Administrator approval is still required before the full territory workspace becomes active.',
     },
     orders: {
       breadcrumb: 'Portal / Orders',
@@ -331,6 +397,18 @@ export default function AdminDashboard() {
       breadcrumb: 'Portal / Stocks',
       title: 'Stocks',
       description: 'Follow inventory visibility, warehouse readiness, and stock movement checkpoints.',
+    },
+    exports: {
+      breadcrumb: 'Portal / Exports',
+      title: 'Demand Forecast Export',
+      description:
+        'Prepare the ARS demand forecast ZIP bundle with reference data, movement records, visit observations, and separated demand signals.',
+    },
+    'forecast-engine': {
+      breadcrumb: 'Portal / Forecast Engine',
+      title: 'Demand Forecast Engine',
+      description:
+        'Run the ARS hybrid forecast engine, review confidence and exceptions, and download the proof report for backtesting and AI explanations.',
     },
   }
 
@@ -402,12 +480,45 @@ export default function AdminDashboard() {
           </button>
         ))}
       </section>
+    ) : isDemandPlannerApproved ? (
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {demandPlannerModules.map((module) => (
+          <button
+            key={module.title}
+            type="button"
+            onClick={() => {
+              if (module.route) {
+                navigate(module.route)
+              }
+            }}
+            className={`relative overflow-hidden rounded-[1.8rem] text-left text-white shadow-[0_22px_54px_rgba(64,30,15,0.18)] transition duration-300 hover:-translate-y-1 ${module.className}`}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.24),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(255,255,255,0.18),_transparent_26%)]" />
+            <div className="relative flex min-h-[18rem] flex-col">
+              <div className="px-5 pt-5">
+                <span className="rounded-[0.8rem] bg-[#f3b539] px-4 py-2 text-sm font-bold text-[#5a2e0d] shadow-[0_12px_30px_rgba(87,42,11,0.2)]">
+                  {module.badge}
+                </span>
+              </div>
+              <div className="mt-auto px-5 pb-6 pt-12">
+                <h2 className="max-w-[12rem] text-[1.9rem] font-bold leading-tight tracking-[-0.03em]">{module.title}</h2>
+                <p className="mt-3 max-w-[16rem] text-sm leading-6 text-white/82">{module.description}</p>
+              </div>
+              <div className="border-t border-white/18 px-5 py-4 text-sm font-medium tracking-[0.03em] text-white/90">
+                {module.action}
+              </div>
+            </div>
+          </button>
+        ))}
+      </section>
     ) : (
       <section className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
         <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Access Status</p>
         <h2 className="mt-3 text-[1.8rem] font-bold tracking-[-0.04em] text-[#4d3020]">Your account is waiting for admin approval</h2>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-[#7f6657]">
-          OTP verification is complete. Once an administrator approves your account, this dashboard will unlock the territory and warehouse workspace.
+          {isDemandPlanner
+            ? 'OTP verification is complete. Once an administrator approves your account, this dashboard will unlock field operations monitoring and promotion management.'
+            : 'OTP verification is complete. Once an administrator approves your account, this dashboard will unlock the territory and warehouse workspace.'}
         </p>
         <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
@@ -418,14 +529,29 @@ export default function AdminDashboard() {
             <p className="text-sm font-semibold text-[#8a6c58]">Account Status</p>
             <p className="mt-2 text-[1.2rem] font-bold text-[#4d3020]">{formatAccountStatus(user.accountStatus)}</p>
           </div>
-          <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
-            <p className="text-sm font-semibold text-[#8a6c58]">Territory</p>
-            <p className="mt-2 text-[1.2rem] font-bold text-[#4d3020]">{user.territoryName ?? 'Not assigned yet'}</p>
-          </div>
-          <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
-            <p className="text-sm font-semibold text-[#8a6c58]">Warehouse</p>
-            <p className="mt-2 text-[1.2rem] font-bold text-[#4d3020]">{user.warehouseName ?? 'Not assigned yet'}</p>
-          </div>
+          {isDemandPlanner ? (
+            <>
+              <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+                <p className="text-sm font-semibold text-[#8a6c58]">Role</p>
+                <p className="mt-2 text-[1.2rem] font-bold text-[#4d3020]">{formatRoleLabel(user.role)}</p>
+              </div>
+              <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+                <p className="text-sm font-semibold text-[#8a6c58]">Employee ID</p>
+                <p className="mt-2 text-[1.2rem] font-bold text-[#4d3020]">{user.employeeId ?? 'Not provided'}</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+                <p className="text-sm font-semibold text-[#8a6c58]">Territory</p>
+                <p className="mt-2 text-[1.2rem] font-bold text-[#4d3020]">{user.territoryName ?? 'Not assigned yet'}</p>
+              </div>
+              <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+                <p className="text-sm font-semibold text-[#8a6c58]">Warehouse</p>
+                <p className="mt-2 text-[1.2rem] font-bold text-[#4d3020]">{user.warehouseName ?? 'Not assigned yet'}</p>
+              </div>
+            </>
+          )}
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
           <button
@@ -533,13 +659,15 @@ export default function AdminDashboard() {
           {isRegionalManagerApproved ? 'Approval Active' : 'Awaiting Review'}
         </p>
         <h2 className="mt-3 text-[1.75rem] font-bold tracking-[-0.04em] text-[#4d3020]">
-          {isRegionalManagerApproved
+          {isRegionalManagerApproved || isDemandPlannerApproved
             ? 'Your administrator approval is complete'
             : 'Administrator approval is still required'}
         </h2>
         <p className="mt-3 text-sm leading-7 text-[#7f6657]">
           {isRegionalManagerApproved
             ? 'Your territory workspace is active. You can now open the territory and warehouse sections from the dashboard.'
+            : isDemandPlannerApproved
+              ? 'Your demand planner workspace is active. You can now open field operations monitoring and promotion management from the dashboard.'
             : 'New web accounts remain here until an administrator reviews them.'}
         </p>
         {!isRegionalManagerApproved ? (
@@ -593,6 +721,34 @@ export default function AdminDashboard() {
         </article>
       </section>
     )
+  } else if (activeSection === 'exports') {
+    content = isDemandPlannerApproved ? (
+      <DemandForecastExportSection />
+    ) : (
+      <section className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
+        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Awaiting Review</p>
+        <h2 className="mt-3 text-[1.75rem] font-bold tracking-[-0.04em] text-[#4d3020]">
+          Export access is unlocked after admin approval
+        </h2>
+        <p className="mt-3 text-sm leading-7 text-[#7f6657]">
+          This export workspace becomes available once the Demand Planner account is approved by an administrator.
+        </p>
+      </section>
+    )
+  } else if (activeSection === 'forecast-engine') {
+    content = isDemandPlannerApproved ? (
+      <DemandForecastEngineSection />
+    ) : (
+      <section className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
+        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Awaiting Review</p>
+        <h2 className="mt-3 text-[1.75rem] font-bold tracking-[-0.04em] text-[#4d3020]">
+          Forecast engine access is unlocked after admin approval
+        </h2>
+        <p className="mt-3 text-sm leading-7 text-[#7f6657]">
+          This forecast workspace becomes available once the Demand Planner account is approved by an administrator.
+        </p>
+      </section>
+    )
   }
 
   return (
@@ -611,14 +767,16 @@ export default function AdminDashboard() {
                     ? 'Admin Portal'
                     : isRegionalManagerApproved
                       ? 'Territory Manager Portal'
-                      : 'Approval Status Portal'}
+                      : isDemandPlannerApproved
+                        ? 'Demand Planner Portal'
+                        : 'Approval Status Portal'}
                 </p>
               </div>
             </div>
           </div>
 
           <nav className="mt-8 flex flex-1 flex-col gap-2">
-            {navigationItems.map((item) => {
+            {visibleNavigationItems.map((item) => {
               const isActive = activeSection === item.key
               const showApprovalCount = item.key === 'approvals' && isAdmin
 
@@ -643,34 +801,48 @@ export default function AdminDashboard() {
           </nav>
 
           <div className="mt-auto flex flex-col gap-1 border-t border-white/10 pt-6">
-            <button
-              type="button"
-              onClick={() => navigate('/admin/settings')}
-              className="flex items-center gap-3 rounded-[1.35rem] px-3 py-3 text-left text-[#e0cdc1] transition duration-200 hover:bg-white/8 hover:text-white"
-            >
-              <span className="flex h-11 w-11 items-center justify-center rounded-[1rem] border border-white/10 bg-black/10 text-[#f2ddca]">
-                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </span>
-              <span className="block truncate text-[0.97rem] font-semibold">Settings</span>
-            </button>
-
-            <div className="mt-1 rounded-[1.5rem] border border-white/12 bg-white/6 px-4 py-4 backdrop-blur-sm">
+            {!isDemandPlanner ? (
               <button
                 type="button"
-                onClick={() => navigate('/admin/profile')}
-                className="flex w-full items-center gap-3 text-left"
+                onClick={() => navigate('/admin/settings')}
+                className="flex items-center gap-3 rounded-[1.35rem] px-3 py-3 text-left text-[#e0cdc1] transition duration-200 hover:bg-white/8 hover:text-white"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#d7965f] to-[#b86d35] text-sm font-bold text-white">
-                  {getUserInitials(user)}
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#fff6ee]">{user.username}</p>
-                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[#dcc7b8]">{formatRoleLabel(user.role)}</p>
-                </div>
+                <span className="flex h-11 w-11 items-center justify-center rounded-[1rem] border border-white/10 bg-black/10 text-[#f2ddca]">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </span>
+                <span className="block truncate text-[0.97rem] font-semibold">Settings</span>
               </button>
+            ) : null}
+
+            <div className="mt-1 rounded-[1.5rem] border border-white/12 bg-white/6 px-4 py-4 backdrop-blur-sm">
+              {isDemandPlanner ? (
+                <div className="flex w-full items-center gap-3 text-left">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#d7965f] to-[#b86d35] text-sm font-bold text-white">
+                    {getUserInitials(user)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[#fff6ee]">{user.username}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[#dcc7b8]">{formatRoleLabel(user.role)}</p>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin/profile')}
+                  className="flex w-full items-center gap-3 text-left"
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#d7965f] to-[#b86d35] text-sm font-bold text-white">
+                    {getUserInitials(user)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[#fff6ee]">{user.username}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[#dcc7b8]">{formatRoleLabel(user.role)}</p>
+                  </div>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => void logout()}

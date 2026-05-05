@@ -222,6 +222,8 @@ const inputCls =
 export default function PromotionManagement() {
   const navigate = useNavigate()
   const { user, isAuthLoading } = useAuth()
+  const canAccessPromotionManagement =
+    user?.role === 'ADMIN' || user?.role === 'DEMAND_PLANNER'
 
   // table state
   const [promotions, setPromotions] = useState<PromotionRecord[]>([])
@@ -401,7 +403,7 @@ export default function PromotionManagement() {
     )
   }
 
-  if (!user || user.role !== 'ADMIN') {
+  if (!user || !canAccessPromotionManagement) {
     navigate('/admin/dashboard', { replace: true })
     return null
   }
