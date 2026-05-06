@@ -4,10 +4,18 @@ import type { AuthUser } from '../api/auth'
 import { getApiErrorMessage } from '../api/client'
 import DemandForecastExportSection from '../components/DemandForecastExportSection'
 import DemandForecastEngineSection from '../components/DemandForecastEngineSection'
+import DemandPlannerInsightCenterSection from '../components/DemandPlannerInsightCenterSection'
 import { approvePendingUser, fetchPendingUsers, rejectPendingUser } from '../api/users'
 import { useAuth } from '../context/AuthContext'
 
-type AdminSection = 'dashboard' | 'approvals' | 'orders' | 'stocks' | 'exports' | 'forecast-engine'
+type AdminSection =
+  | 'dashboard'
+  | 'approvals'
+  | 'orders'
+  | 'stocks'
+  | 'exports'
+  | 'forecast-engine'
+  | 'insight-center'
 
 const surfaceClassName =
   'rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]'
@@ -22,6 +30,7 @@ const DEMAND_PLANNER_NAVIGATION_ITEMS: Array<{ key: AdminSection; label: string 
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'exports', label: 'Exports' },
   { key: 'forecast-engine', label: 'Forecast Engine' },
+  { key: 'insight-center', label: 'Insight Center' },
 ]
 
 const DEMAND_PLANNER_MODULE_ROUTES = new Set([
@@ -179,6 +188,19 @@ function NavGlyph({ name }: { name: AdminSection }) {
         <path d="M17 6.5h1.5V8" />
         <path d="M6.5 5.5h4" />
         <path d="M6.5 8.5h2" />
+      </svg>
+    )
+  }
+
+  if (name === 'insight-center') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M4 19h16" />
+        <path d="M7 16v-5" />
+        <path d="M12 16V7" />
+        <path d="M17 16v-3" />
+        <path d="m6.5 8.5 4.2-3 3.2 2.4 3.6-4.4" />
+        <path d="M18.2 3.5h1.3v1.3" />
       </svg>
     )
   }
@@ -348,7 +370,7 @@ export default function AdminDashboard() {
       setFeedback(
         refreshedUser.approvalStatus === 'APPROVED'
           ? refreshedUser.role === 'DEMAND_PLANNER'
-            ? 'Your account approval is active. Field operations monitoring and promotion management are ready.'
+            ? 'Your account approval is active. Forecast exports, the forecast engine, and Insight Center are ready.'
             : 'Your account approval is active. The territory workspace is ready.'
           : 'Your account status is still waiting for admin approval.',
       )
@@ -374,7 +396,7 @@ export default function AdminDashboard() {
         : isRegionalManagerApproved
           ? 'Open the territory and warehouse workspace from the same portal shell used by the admin team.'
           : isDemandPlannerApproved
-            ? 'Open field operations monitoring and promotion management from one focused workspace.'
+            ? 'Open forecast exports, the forecast engine, and Insight Center from one focused workspace.'
           : 'Your account has completed OTP verification and is now waiting for administrator approval.',
     },
     approvals: {
@@ -385,7 +407,7 @@ export default function AdminDashboard() {
         : isRegionalManagerApproved || isDemandPlannerApproved
           ? 'Your web account approval is active.'
           : isDemandPlanner
-            ? 'Administrator approval is still required before field operations monitoring and promotion management become active.'
+            ? 'Administrator approval is still required before demand planning analytics become active.'
             : 'Administrator approval is still required before the full territory workspace becomes active.',
     },
     orders: {
@@ -409,6 +431,12 @@ export default function AdminDashboard() {
       title: 'Demand Forecast Engine',
       description:
         'Run the ARS hybrid forecast engine, review confidence and exceptions, and download the proof report for backtesting and AI explanations.',
+    },
+    'insight-center': {
+      breadcrumb: 'Portal / Insight Center',
+      title: 'Insight Center',
+      description:
+        'Explore exact replenishment demand separately from estimated retail offtake, review confidence, and export planner-ready insight reports.',
     },
   }
 
@@ -667,7 +695,7 @@ export default function AdminDashboard() {
           {isRegionalManagerApproved
             ? 'Your territory workspace is active. You can now open the territory and warehouse sections from the dashboard.'
             : isDemandPlannerApproved
-              ? 'Your demand planner workspace is active. You can now open field operations monitoring and promotion management from the dashboard.'
+              ? 'Your demand planner workspace is active. You can now open forecast exports, the forecast engine, and Insight Center from the navigation.'
             : 'New web accounts remain here until an administrator reviews them.'}
         </p>
         {!isRegionalManagerApproved ? (
@@ -746,6 +774,20 @@ export default function AdminDashboard() {
         </h2>
         <p className="mt-3 text-sm leading-7 text-[#7f6657]">
           This forecast workspace becomes available once the Demand Planner account is approved by an administrator.
+        </p>
+      </section>
+    )
+  } else if (activeSection === 'insight-center') {
+    content = isDemandPlannerApproved ? (
+      <DemandPlannerInsightCenterSection />
+    ) : (
+      <section className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
+        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Awaiting Review</p>
+        <h2 className="mt-3 text-[1.75rem] font-bold tracking-[-0.04em] text-[#4d3020]">
+          Insight Center access is unlocked after admin approval
+        </h2>
+        <p className="mt-3 text-sm leading-7 text-[#7f6657]">
+          This analytics workspace becomes available once the Demand Planner account is approved by an administrator.
         </p>
       </section>
     )
