@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => {
         "/delivery-assignments": apiProxyTarget,
         "/exports": apiProxyTarget,
         "/forecast-engine": apiProxyTarget,
+        "/insight-center": apiProxyTarget,
         "/products": apiProxyTarget,
         "/territories": apiProxyTarget,
         "/tm": apiProxyTarget,
