@@ -5,11 +5,13 @@ import {
   downloadInsightCenterPdf,
   fetchInsightCenterDashboard,
   type InsightCenterDashboard,
+  type InsightFilterOption,
   type InsightCenterParams,
   type InsightDemandSplitRow,
   type InsightExceptionRow,
   type InsightKpi,
   type InsightTrendPoint,
+  type InsightWarehouseOption,
 } from '../api/insightCenter'
 
 const surfaceClassName =
@@ -47,6 +49,15 @@ function formatOption(value: string) {
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
+}
+
+type SelectOption = InsightFilterOption
+
+function toSelectOptions(values: string[]): SelectOption[] {
+  return values.map((value) => ({
+    value,
+    label: formatOption(value),
+  }))
 }
 
 function formatKpiValue(kpi: InsightKpi) {
@@ -91,6 +102,8 @@ export default function DemandPlannerInsightCenterSection() {
   const [viewMode, setViewMode] = useState('absolute')
   const [confidenceLevel, setConfidenceLevel] = useState('all')
   const [compareMode, setCompareMode] = useState('previous_period')
+  const [territoryId, setTerritoryId] = useState('')
+  const [warehouseId, setWarehouseId] = useState('')
   const [activeTab, setActiveTab] = useState('Overview')
   const [dashboard, setDashboard] = useState<InsightCenterDashboard | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -118,6 +131,8 @@ export default function DemandPlannerInsightCenterSection() {
       viewMode,
       confidenceLevel,
       compareMode,
+      territoryId: territoryId || undefined,
+      warehouseId: warehouseId || undefined,
     }
   }
 
@@ -209,6 +224,36 @@ export default function DemandPlannerInsightCenterSection() {
       ),
     ),
   )
+  const periodOptions = toSelectOptions(dashboard?.controls.periods ?? ['7d', '30d', '90d', 'ytd', 'custom'])
+  const granularityOptions = toSelectOptions(dashboard?.controls.granularities ?? ['daily', 'weekly', 'monthly'])
+  const demandTypeOptions = toSelectOptions(
+    dashboard?.controls.demandTypes ?? ['all', 'replenishment', 'estimated_retail_offtake'],
+  )
+  const viewModeOptions = toSelectOptions(
+    dashboard?.controls.viewModes ?? ['absolute', 'normalized', 'confidence_adjusted'],
+  )
+  const confidenceLevelOptions = toSelectOptions(
+    dashboard?.controls.confidenceLevels ?? ['all', 'high_only'],
+  )
+  const compareModeOptions = toSelectOptions(
+    dashboard?.controls.compareModes ?? ['previous_period', 'previous_month', 'previous_year'],
+  )
+  const territoryOptions: SelectOption[] = [
+    { value: '', label: 'All territories' },
+    ...(dashboard?.controls.territories ?? []),
+  ]
+  const warehouseOptions: InsightWarehouseOption[] = [
+    { value: '', label: 'All warehouses', territoryId: null },
+    ...((dashboard?.controls.warehouses ?? []).filter(
+      (option) => !territoryId || option.territoryId === territoryId,
+    )),
+  ]
+
+  useEffect(() => {
+    if (warehouseId && !warehouseOptions.some((option) => option.value === warehouseId)) {
+      setWarehouseId('')
+    }
+  }, [warehouseId, warehouseOptions])
 
   return (
     <div className="grid gap-6">
@@ -227,12 +272,14 @@ export default function DemandPlannerInsightCenterSection() {
         </div>
 
         <div className="grid gap-4 px-6 py-6 sm:px-7 md:grid-cols-2 xl:grid-cols-4">
-          <FilterSelect label="Time period" value={period} onChange={setPeriod} options={['7d', '30d', '90d', 'ytd', 'custom']} />
-          <FilterSelect label="Granularity" value={granularity} onChange={setGranularity} options={['daily', 'weekly', 'monthly']} />
-          <FilterSelect label="Demand type" value={demandType} onChange={setDemandType} options={['all', 'replenishment', 'estimated_retail_offtake']} />
-          <FilterSelect label="View mode" value={viewMode} onChange={setViewMode} options={['absolute', 'normalized', 'confidence_adjusted']} />
-          <FilterSelect label="Confidence" value={confidenceLevel} onChange={setConfidenceLevel} options={['all', 'high_only']} />
-          <FilterSelect label="Compare mode" value={compareMode} onChange={setCompareMode} options={['previous_period', 'previous_month', 'previous_year']} />
+          <FilterSelect label="Time period" value={period} onChange={setPeriod} options={periodOptions} />
+          <FilterSelect label="Granularity" value={granularity} onChange={setGranularity} options={granularityOptions} />
+          <FilterSelect label="Demand type" value={demandType} onChange={setDemandType} options={demandTypeOptions} />
+          <FilterSelect label="View mode" value={viewMode} onChange={setViewMode} options={viewModeOptions} />
+          <FilterSelect label="Confidence" value={confidenceLevel} onChange={setConfidenceLevel} options={confidenceLevelOptions} />
+          <FilterSelect label="Compare mode" value={compareMode} onChange={setCompareMode} options={compareModeOptions} />
+          <FilterSelect label="Territory" value={territoryId} onChange={setTerritoryId} options={territoryOptions} />
+          <FilterSelect label="Warehouse" value={warehouseId} onChange={setWarehouseId} options={warehouseOptions} />
           <label className="space-y-2">
             <span className="text-sm font-semibold text-[#3f5652]">From date</span>
             <input
@@ -364,7 +411,7 @@ function FilterSelect({
   label: string
   value: string
   onChange: (value: string) => void
-  options: string[]
+  options: SelectOption[]
 }) {
   return (
     <label className="space-y-2">
@@ -375,8 +422,8 @@ function FilterSelect({
         className="w-full rounded-[1rem] border border-[#d6dfd8] bg-[#fffdfb] px-4 py-3 text-sm text-[#2f4540] outline-none transition duration-300 focus:border-[#6e9d94]"
       >
         {options.map((option) => (
-          <option key={option} value={option}>
-            {formatOption(option)}
+          <option key={option.value} value={option.value}>
+            {option.label}
           </option>
         ))}
       </select>

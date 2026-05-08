@@ -19,13 +19,16 @@ function toAbsoluteBaseUrl(url: URL) {
 }
 
 function resolveApiBaseUrl() {
+  // In Vite dev, keep API and asset requests same-origin so they flow through
+  // the dev proxy. Pick the actual backend via VITE_API_PROXY_TARGET.
+  if (import.meta.env.DEV) {
+    return ''
+  }
+
   const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
-  const localDevTarget =
-    import.meta.env.DEV &&
-    (import.meta.env.VITE_API_PROXY_TARGET?.trim() || 'http://localhost:3000')
 
   if (!configuredBaseUrl) {
-    return localDevTarget || ''
+    return ''
   }
 
   try {
@@ -56,8 +59,10 @@ function resolveApiBaseUrl() {
   }
 }
 
+const resolvedApiBaseUrl = resolveApiBaseUrl()
+
 export const apiClient = axios.create({
-  baseURL: resolveApiBaseUrl(),
+  baseURL: resolvedApiBaseUrl,
 })
 
 apiClient.interceptors.request.use((config) => {
@@ -119,6 +124,5 @@ export function getApiErrorCode(error: unknown) {
 export function resolveMediaUrl(path: string | null | undefined): string {
   if (!path) return ''
   if (path.startsWith('http://') || path.startsWith('https://')) return path
-  const base = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
-  return base + path
+  return resolvedApiBaseUrl + path
 }

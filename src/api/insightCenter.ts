@@ -147,6 +147,15 @@ export interface InsightDrilldownRow {
   confidence_score: number
 }
 
+export interface InsightFilterOption {
+  value: string
+  label: string
+}
+
+export interface InsightWarehouseOption extends InsightFilterOption {
+  territoryId: string | null
+}
+
 export interface InsightCenterDashboard {
   summary: InsightCenterSummary
   controls: {
@@ -157,6 +166,8 @@ export interface InsightCenterDashboard {
     confidenceLevels: string[]
     compareModes: string[]
     normalizers: string[]
+    territories: InsightFilterOption[]
+    warehouses: InsightWarehouseOption[]
   }
   kpis: InsightKpi[]
   charts: {
