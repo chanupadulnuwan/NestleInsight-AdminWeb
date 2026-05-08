@@ -152,6 +152,98 @@ function linePath(
     .join(' ')
 }
 
+function buildManufactureSummary(
+  recommendations: PlannerRecommendation[],
+  selectedProductLabel: string,
+) {
+  if (recommendations.length === 0) {
+    return []
+  }
+
+  return recommendations.map((recommendation) => ({
+    id: recommendation.recommendation_id,
+    productLabel:
+      selectedProductLabel !== 'All products'
+        ? selectedProductLabel
+        : recommendation.product_name,
+    totalCases: recommendation.recommended_production_cases,
+    dailyCases: recommendation.suggested_daily_manufacture_cases,
+    horizonStart: recommendation.horizon_start,
+    horizonEnd: recommendation.horizon_end,
+  }))
+}
+
+function formatChartDateLabel(date: string, cadence: 'daily' | 'weekly' | 'monthly') {
+  if (cadence === 'monthly') {
+    return date.slice(0, 7)
+  }
+
+  if (cadence === 'weekly') {
+    return `Wk ${date.slice(5)}`
+  }
+
+  return date.slice(5)
+}
+
+function aggregatePlanForChart(plan: ManufacturePlanPoint[]) {
+  if (plan.length <= 45) {
+    return {
+      cadence: 'daily' as const,
+      points: plan,
+    }
+  }
+
+  if (plan.length <= 120) {
+    const weeklyBuckets = new Map<string, ManufacturePlanPoint>()
+
+    plan.forEach((point, index) => {
+      const bucketIndex = Math.floor(index / 7)
+      const bucketKey = `${point.date}|week-${bucketIndex}`
+      const existing = weeklyBuckets.get(bucketKey) ?? {
+        date: point.date,
+        total_forecast_cases: 0,
+        replenishment_forecast_cases: 0,
+        retail_offtake_forecast_cases: 0,
+        recommended_manufacture_cases: 0,
+      }
+
+      existing.total_forecast_cases += point.total_forecast_cases
+      existing.replenishment_forecast_cases += point.replenishment_forecast_cases
+      existing.retail_offtake_forecast_cases += point.retail_offtake_forecast_cases
+      existing.recommended_manufacture_cases += point.recommended_manufacture_cases
+      weeklyBuckets.set(bucketKey, existing)
+    })
+
+    return {
+      cadence: 'weekly' as const,
+      points: [...weeklyBuckets.values()],
+    }
+  }
+
+  const monthlyBuckets = new Map<string, ManufacturePlanPoint>()
+  plan.forEach((point) => {
+    const monthKey = point.date.slice(0, 7)
+    const existing = monthlyBuckets.get(monthKey) ?? {
+      date: `${monthKey}-01`,
+      total_forecast_cases: 0,
+      replenishment_forecast_cases: 0,
+      retail_offtake_forecast_cases: 0,
+      recommended_manufacture_cases: 0,
+    }
+
+    existing.total_forecast_cases += point.total_forecast_cases
+    existing.replenishment_forecast_cases += point.replenishment_forecast_cases
+    existing.retail_offtake_forecast_cases += point.retail_offtake_forecast_cases
+    existing.recommended_manufacture_cases += point.recommended_manufacture_cases
+    monthlyBuckets.set(monthKey, existing)
+  })
+
+  return {
+    cadence: 'monthly' as const,
+    points: [...monthlyBuckets.values()],
+  }
+}
+
 export default function DemandForecastEngineSection() {
   const [sourceMode, setSourceMode] = useState<'live' | 'imported_bundle'>('live')
   const [bundleFile, setBundleFile] = useState<File | null>(null)
@@ -216,6 +308,7 @@ export default function DemandForecastEngineSection() {
     setIsLoading(true)
     setError(null)
     setFeedback(null)
+    setPreview(null)
 
     try {
       const data =
@@ -308,6 +401,11 @@ export default function DemandForecastEngineSection() {
     const selected = productOptions.find((option) => option.value === productId)
     return selected?.label ?? 'All products'
   }, [productId, productOptions])
+
+  const manufactureSummary = useMemo(
+    () => buildManufactureSummary(recommendations, selectedProductLabel),
+    [recommendations, selectedProductLabel],
+  )
 
   return (
     <div className="grid gap-6">
@@ -570,14 +668,14 @@ export default function DemandForecastEngineSection() {
                 Future Manufacture Line
               </p>
               <h3 className="mt-2 text-[1.35rem] font-bold text-[#2f3b2c]">
-                Forecast demand versus suggested build pace
+                Suggested manufacture pace
               </h3>
             </div>
             <p className="text-sm text-[#687561]">{summary?.modelVersion ?? 'ARS-HYBRID-WMA-1.0'}</p>
           </div>
 
           <p className="mt-3 text-sm leading-7 text-[#687561]">
-            The chart separates replenishment demand, estimated retail offtake, and the suggested manufacturing pace. All values are shown as cases per day across the selected forecast dates.
+            The orange line shows how many cases should be manufactured across the selected horizon. Product scope: {selectedProductLabel}.
           </p>
 
           <div className="mt-5">
@@ -589,17 +687,30 @@ export default function DemandForecastEngineSection() {
 
           <div className="mt-4 flex flex-wrap gap-5 text-sm text-[#5d6d60]">
             <span className="inline-flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#54715a]" />
-              Replenishment demand
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#3d8f9b]" />
-              Estimated retail offtake
-            </span>
-            <span className="inline-flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-[#b6793f]" />
               Suggested manufacture
             </span>
+          </div>
+
+          <div className="mt-5 grid gap-3">
+            {manufactureSummary.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-[1rem] border border-[#eadfd3] bg-[#fffaf4] px-4 py-4 text-sm text-[#6d645c]"
+              >
+                <p className="font-semibold text-[#2f3b2c]">
+                  Manufacture {formatNumber(item.totalCases)} cases of {item.productLabel}
+                </p>
+                <p className="mt-2 leading-6">
+                  Plan window: {item.horizonStart} to {item.horizonEnd} | Suggested pace: {formatNumber(item.dailyCases)} cases per day
+                </p>
+              </div>
+            ))}
+            {manufactureSummary.length === 0 ? (
+              <div className="rounded-[1rem] border border-[#d5dfcf] bg-[#f8fbf5] px-4 py-4 text-sm text-[#687561]">
+                Manufacture quantities will appear here after the planner generates product recommendations.
+              </div>
+            ) : null}
           </div>
         </article>
       </section>
@@ -887,6 +998,9 @@ function ManufactureLineChart({
   plan: ManufacturePlanPoint[]
   productLabel: string
 }) {
+  const { cadence, points } = aggregatePlanForChart(plan)
+  const unitLabel =
+    cadence === 'monthly' ? 'cases per month' : cadence === 'weekly' ? 'cases per week' : 'cases per day'
   const viewWidth = 640
   const viewHeight = 260
   const chartLeft = 56
@@ -896,7 +1010,7 @@ function ManufactureLineChart({
   const innerWidth = viewWidth - chartLeft - chartRight
   const innerHeight = viewHeight - chartTop - chartBottom
 
-  if (plan.length === 0) {
+  if (points.length === 0) {
     return (
       <div className="rounded-[1.2rem] border border-[#d5dfcf] bg-[#f8fbf5] px-4 py-10 text-sm text-[#687561]">
         The manufacture line will appear after a forecast run produces future rows.
@@ -904,29 +1018,13 @@ function ManufactureLineChart({
     )
   }
 
-  const values = plan.flatMap((point) => [
-    point.replenishment_forecast_cases,
-    point.retail_offtake_forecast_cases,
+  const values = points.flatMap((point) => [
     point.recommended_manufacture_cases,
   ])
   const maxValue = Math.max(1, ...values)
 
-  const replenishmentPath = linePath(
-    plan,
-    innerWidth,
-    innerHeight,
-    maxValue,
-    (point) => point.replenishment_forecast_cases,
-  )
-  const retailPath = linePath(
-    plan,
-    innerWidth,
-    innerHeight,
-    maxValue,
-    (point) => point.retail_offtake_forecast_cases,
-  )
   const manufacturePath = linePath(
-    plan,
+    points,
     innerWidth,
     innerHeight,
     maxValue,
@@ -936,9 +1034,9 @@ function ManufactureLineChart({
   const tickIndexes = Array.from(
     new Set([
       0,
-      Math.floor((plan.length - 1) / 3),
-      Math.floor((plan.length - 1) * 2 / 3),
-      plan.length - 1,
+      Math.floor((points.length - 1) / 3),
+      Math.floor((points.length - 1) * 2 / 3),
+      points.length - 1,
     ]),
   )
 
@@ -946,7 +1044,7 @@ function ManufactureLineChart({
     <svg viewBox={`0 0 ${viewWidth} ${viewHeight}`} className="w-full overflow-visible">
       <defs>
         <linearGradient id="forecastLineFill" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#dfeee1" stopOpacity="0.7" />
+          <stop offset="0%" stopColor="#f3d4b5" stopOpacity="0.55" />
           <stop offset="100%" stopColor="#ffffff" stopOpacity="0.1" />
         </linearGradient>
       </defs>
@@ -994,29 +1092,21 @@ function ManufactureLineChart({
 
       <g transform={`translate(${chartLeft}, ${chartTop})`}>
         <path
-          d={`${replenishmentPath} L ${innerWidth} ${innerHeight} L 0 ${innerHeight} Z`}
+          d={`${manufacturePath} L ${innerWidth} ${innerHeight} L 0 ${innerHeight} Z`}
           fill="url(#forecastLineFill)"
-          opacity="0.55"
+          opacity="0.3"
         />
-        <path d={replenishmentPath} fill="none" stroke="#54715a" strokeWidth="3" strokeLinecap="round" />
-        <path d={retailPath} fill="none" stroke="#3d8f9b" strokeWidth="3" strokeLinecap="round" />
         <path d={manufacturePath} fill="none" stroke="#b6793f" strokeWidth="3" strokeLinecap="round" />
 
-        {plan.map((point, index) => {
+        {points.map((point, index) => {
           const x =
-            plan.length === 1 ? innerWidth / 2 : (index / Math.max(1, plan.length - 1)) * innerWidth
-          const replenishmentY =
-            innerHeight - (point.replenishment_forecast_cases / maxValue) * innerHeight
-          const retailY =
-            innerHeight - (point.retail_offtake_forecast_cases / maxValue) * innerHeight
+            points.length === 1 ? innerWidth / 2 : (index / Math.max(1, points.length - 1)) * innerWidth
           const manufactureY =
             innerHeight -
             (point.recommended_manufacture_cases / maxValue) * innerHeight
 
           return (
             <g key={point.date}>
-              <circle cx={x} cy={replenishmentY} r="3.3" fill="#54715a" />
-              <circle cx={x} cy={retailY} r="3.3" fill="#3d8f9b" />
               <circle cx={x} cy={manufactureY} r="3.3" fill="#b6793f" />
             </g>
           )
@@ -1025,19 +1115,19 @@ function ManufactureLineChart({
 
       {tickIndexes.map((index) => {
         const x =
-          plan.length === 1
+          points.length === 1
             ? chartLeft + innerWidth / 2
-            : chartLeft + (index / Math.max(1, plan.length - 1)) * innerWidth
+            : chartLeft + (index / Math.max(1, points.length - 1)) * innerWidth
         return (
           <text
-            key={`${plan[index]?.date ?? index}-tick`}
+            key={`${points[index]?.date ?? index}-tick`}
             x={x}
             y={viewHeight - 10}
             textAnchor="middle"
             fontSize="11"
             fill="#7a8772"
           >
-            {plan[index]?.date.slice(5) ?? ''}
+            {points[index] ? formatChartDateLabel(points[index].date, cadence) : ''}
           </text>
         )
       })}
@@ -1048,7 +1138,7 @@ function ManufactureLineChart({
         fontSize="11"
         fill="#7a8772"
       >
-        Scope: {productLabel} | Unit: cases per day
+        Scope: {productLabel} | Unit: {unitLabel}
       </text>
       <text
         x={14}
@@ -1057,7 +1147,7 @@ function ManufactureLineChart({
         fill="#7a8772"
         transform={`rotate(-90 14 ${viewHeight / 2})`}
       >
-        Cases per day
+        {unitLabel}
       </text>
       <text
         x={viewWidth / 2}
