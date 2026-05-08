@@ -26,6 +26,12 @@ const defaultPlanningWindows: ForecastControlOption[] = [
   { value: 'next_year', label: 'Next year', days: 365 },
 ]
 
+function defaultDateInput(offsetDays = 0) {
+  const date = new Date()
+  date.setDate(date.getDate() + offsetDays)
+  return date.toISOString().slice(0, 10)
+}
+
 function formatPercent(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return 'N/A'
@@ -149,8 +155,8 @@ function linePath(
 export default function DemandForecastEngineSection() {
   const [sourceMode, setSourceMode] = useState<'live' | 'imported_bundle'>('live')
   const [bundleFile, setBundleFile] = useState<File | null>(null)
-  const [fromDate, setFromDate] = useState('')
-  const [toDate, setToDate] = useState('')
+  const [fromDate, setFromDate] = useState(() => defaultDateInput(-90))
+  const [toDate, setToDate] = useState(() => defaultDateInput(0))
   const [planningWindow, setPlanningWindow] = useState('next_month')
   const [productId, setProductId] = useState('')
   const [backtestDays, setBacktestDays] = useState('14')
@@ -168,6 +174,11 @@ export default function DemandForecastEngineSection() {
     const parsedBacktestDays = Number(backtestDays)
     const trimmedFromDate = fromDate.trim()
     const trimmedToDate = toDate.trim()
+
+    if (!trimmedFromDate || !trimmedToDate) {
+      setError('Select both From date and To date before running or downloading the planner report.')
+      return null
+    }
 
     if (
       !Number.isInteger(parsedBacktestDays) ||
@@ -221,11 +232,14 @@ export default function DemandForecastEngineSection() {
           : 'Forecast engine preview refreshed.',
       )
     } catch (requestError) {
+      const message = getApiErrorMessage(
+        requestError,
+        'Unable to run the ARS demand forecast engine right now.',
+      )
       setError(
-        getApiErrorMessage(
-          requestError,
-          'Unable to run the ARS demand forecast engine right now.',
-        ),
+        sourceMode === 'imported_bundle' && message === 'Network Error'
+          ? 'Imported ZIP mode is not reachable right now. If this is the deployed server, it still needs the latest forecast import backend endpoints.'
+          : message,
       )
     } finally {
       setIsLoading(false)
@@ -261,11 +275,14 @@ export default function DemandForecastEngineSection() {
       window.setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 1000)
       setFeedback(`${filename} is ready.`)
     } catch (requestError) {
+      const message = getApiErrorMessage(
+        requestError,
+        'Unable to download the planner PDF right now.',
+      )
       setError(
-        getApiErrorMessage(
-          requestError,
-          'Unable to download the planner PDF right now.',
-        ),
+        sourceMode === 'imported_bundle' && message === 'Network Error'
+          ? 'The imported-bundle PDF route is not reachable right now. If this is the deployed server, it still needs the latest forecast import backend endpoints.'
+          : message,
       )
     } finally {
       setIsDownloading(false)
@@ -560,17 +577,24 @@ export default function DemandForecastEngineSection() {
           </div>
 
           <p className="mt-3 text-sm leading-7 text-[#687561]">
-            The green line shows projected demand in the selected horizon. The amber line shows how manufacturing should be paced if you want to cover that demand plus safety stock.
+            The chart separates replenishment demand, estimated retail offtake, and the suggested manufacturing pace. All values are shown as cases per day across the selected forecast dates.
           </p>
 
           <div className="mt-5">
-            <ManufactureLineChart plan={manufacturePlan} />
+            <ManufactureLineChart
+              plan={manufacturePlan}
+              productLabel={selectedProductLabel}
+            />
           </div>
 
           <div className="mt-4 flex flex-wrap gap-5 text-sm text-[#5d6d60]">
             <span className="inline-flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-[#54715a]" />
-              Forecast demand
+              Replenishment demand
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#3d8f9b]" />
+              Estimated retail offtake
             </span>
             <span className="inline-flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-[#b6793f]" />
@@ -856,13 +880,19 @@ function MeaningCard({ title, body }: { title: string; body: string }) {
   )
 }
 
-function ManufactureLineChart({ plan }: { plan: ManufacturePlanPoint[] }) {
+function ManufactureLineChart({
+  plan,
+  productLabel,
+}: {
+  plan: ManufacturePlanPoint[]
+  productLabel: string
+}) {
   const viewWidth = 640
   const viewHeight = 260
-  const chartLeft = 24
+  const chartLeft = 56
   const chartRight = 16
-  const chartTop = 22
-  const chartBottom = 32
+  const chartTop = 26
+  const chartBottom = 44
   const innerWidth = viewWidth - chartLeft - chartRight
   const innerHeight = viewHeight - chartTop - chartBottom
 
@@ -875,12 +905,26 @@ function ManufactureLineChart({ plan }: { plan: ManufacturePlanPoint[] }) {
   }
 
   const values = plan.flatMap((point) => [
-    point.total_forecast_cases,
+    point.replenishment_forecast_cases,
+    point.retail_offtake_forecast_cases,
     point.recommended_manufacture_cases,
   ])
   const maxValue = Math.max(1, ...values)
 
-  const demandPath = linePath(plan, innerWidth, innerHeight, maxValue, (point) => point.total_forecast_cases)
+  const replenishmentPath = linePath(
+    plan,
+    innerWidth,
+    innerHeight,
+    maxValue,
+    (point) => point.replenishment_forecast_cases,
+  )
+  const retailPath = linePath(
+    plan,
+    innerWidth,
+    innerHeight,
+    maxValue,
+    (point) => point.retail_offtake_forecast_cases,
+  )
   const manufacturePath = linePath(
     plan,
     innerWidth,
@@ -932,26 +976,47 @@ function ManufactureLineChart({ plan }: { plan: ManufacturePlanPoint[] }) {
         )
       })}
 
+      {[0, 1, 2, 3].map((index) => {
+        const value = maxValue - (maxValue / 3) * index
+        const y = chartTop + (innerHeight / 3) * index + 4
+        return (
+          <text
+            key={`y-${index}`}
+            x={10}
+            y={y}
+            fontSize="11"
+            fill="#7a8772"
+          >
+            {formatNumber(value, 1)}
+          </text>
+        )
+      })}
+
       <g transform={`translate(${chartLeft}, ${chartTop})`}>
         <path
-          d={`${demandPath} L ${innerWidth} ${innerHeight} L 0 ${innerHeight} Z`}
+          d={`${replenishmentPath} L ${innerWidth} ${innerHeight} L 0 ${innerHeight} Z`}
           fill="url(#forecastLineFill)"
-          opacity="0.9"
+          opacity="0.55"
         />
-        <path d={demandPath} fill="none" stroke="#54715a" strokeWidth="3" strokeLinecap="round" />
+        <path d={replenishmentPath} fill="none" stroke="#54715a" strokeWidth="3" strokeLinecap="round" />
+        <path d={retailPath} fill="none" stroke="#3d8f9b" strokeWidth="3" strokeLinecap="round" />
         <path d={manufacturePath} fill="none" stroke="#b6793f" strokeWidth="3" strokeLinecap="round" />
 
         {plan.map((point, index) => {
           const x =
             plan.length === 1 ? innerWidth / 2 : (index / Math.max(1, plan.length - 1)) * innerWidth
-          const demandY = innerHeight - (point.total_forecast_cases / maxValue) * innerHeight
+          const replenishmentY =
+            innerHeight - (point.replenishment_forecast_cases / maxValue) * innerHeight
+          const retailY =
+            innerHeight - (point.retail_offtake_forecast_cases / maxValue) * innerHeight
           const manufactureY =
             innerHeight -
             (point.recommended_manufacture_cases / maxValue) * innerHeight
 
           return (
             <g key={point.date}>
-              <circle cx={x} cy={demandY} r="3.3" fill="#54715a" />
+              <circle cx={x} cy={replenishmentY} r="3.3" fill="#54715a" />
+              <circle cx={x} cy={retailY} r="3.3" fill="#3d8f9b" />
               <circle cx={x} cy={manufactureY} r="3.3" fill="#b6793f" />
             </g>
           )
@@ -983,7 +1048,25 @@ function ManufactureLineChart({ plan }: { plan: ManufacturePlanPoint[] }) {
         fontSize="11"
         fill="#7a8772"
       >
-        Peak {formatNumber(maxValue, 1)} cases
+        Scope: {productLabel} | Unit: cases per day
+      </text>
+      <text
+        x={14}
+        y={viewHeight / 2}
+        fontSize="11"
+        fill="#7a8772"
+        transform={`rotate(-90 14 ${viewHeight / 2})`}
+      >
+        Cases per day
+      </text>
+      <text
+        x={viewWidth / 2}
+        y={viewHeight - 6}
+        textAnchor="middle"
+        fontSize="11"
+        fill="#7a8772"
+      >
+        Forecast date
       </text>
     </svg>
   )

@@ -226,6 +226,49 @@ function parseDownloadFilename(contentDisposition: string | undefined) {
   return basicMatch?.[1]?.trim() || getFallbackReportFilename()
 }
 
+async function extractBlobErrorMessage(blob: Blob) {
+  const text = await blob.text()
+
+  try {
+    const parsed = JSON.parse(text) as { message?: unknown }
+    if (Array.isArray(parsed.message)) {
+      return parsed.message.filter((item): item is string => typeof item === 'string').join(' ')
+    }
+    if (typeof parsed.message === 'string' && parsed.message.trim()) {
+      return parsed.message
+    }
+  } catch {
+    // Fall through to text parsing.
+  }
+
+  const stripped = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+  return stripped || 'The server did not return a valid PDF report.'
+}
+
+async function ensurePdfBlob(
+  blob: Blob,
+  contentType: string | undefined,
+  filename: string,
+) {
+  const header = await blob.slice(0, 5).text()
+
+  if (header === '%PDF-') {
+    return
+  }
+
+  if (
+    filename.toLowerCase().endsWith('.zip') ||
+    contentType?.toLowerCase().includes('zip') ||
+    header.startsWith('PK')
+  ) {
+    throw new Error(
+      'The server returned a ZIP bundle instead of a PDF. Deploy the latest backend before using planner PDF download.',
+    )
+  }
+
+  throw new Error(await extractBlobErrorMessage(blob))
+}
+
 function buildFallbackProducts(rows: ForecastOutputRow[]) {
   const productMap = new Map<string, ForecastControlOption>()
 
@@ -400,9 +443,12 @@ export async function downloadForecastEngineReport(params: ForecastEngineParams)
     responseType: 'blob',
   })
 
+  const filename = parseDownloadFilename(response.headers['content-disposition'])
+  await ensurePdfBlob(response.data, response.headers['content-type'], filename)
+
   return {
     blob: response.data,
-    filename: parseDownloadFilename(response.headers['content-disposition']),
+    filename,
   }
 }
 
@@ -418,8 +464,11 @@ export async function downloadImportedForecastEngineReport(
     },
   )
 
+  const filename = parseDownloadFilename(response.headers['content-disposition'])
+  await ensurePdfBlob(response.data, response.headers['content-type'], filename)
+
   return {
     blob: response.data,
-    filename: parseDownloadFilename(response.headers['content-disposition']),
+    filename,
   }
 }
