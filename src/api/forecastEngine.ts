@@ -5,6 +5,8 @@ export interface ForecastEngineParams {
   toDate?: string
   forecastDays?: number
   backtestDays?: number
+  productId?: string
+  planningWindow?: string
 }
 
 export interface ForecastEngineSummary {
@@ -19,6 +21,16 @@ export interface ForecastEngineSummary {
   averageConfidenceScore: number
   averageWape: number | null
   modelVersion: string
+  planningWindow: string
+  selectedProductId: string | null
+  sourceMode: 'live' | 'imported_bundle'
+}
+
+export interface ForecastControlOption {
+  value: string
+  label: string
+  days?: number
+  sku?: string
 }
 
 export interface ForecastOutputRow {
@@ -103,8 +115,62 @@ export interface ForecastAiExplanationRow {
   business_explanation: string
 }
 
+export interface ManufacturePlanPoint {
+  date: string
+  total_forecast_cases: number
+  replenishment_forecast_cases: number
+  retail_offtake_forecast_cases: number
+  recommended_manufacture_cases: number
+}
+
+export interface PlannerRecommendation {
+  recommendation_id: string
+  product_id: string
+  product_name: string
+  forecast_cases: number
+  replenishment_forecast_cases: number
+  retail_offtake_forecast_cases: number
+  current_stock_cases: number
+  safety_stock_cases: number
+  required_cases: number
+  recommended_production_cases: number
+  suggested_daily_manufacture_cases: number
+  average_confidence_score: number
+  action: 'INCREASE' | 'HOLD' | 'DECREASE'
+  urgency: 'HIGH' | 'MEDIUM' | 'LOW'
+  reason_summary: string
+  reasons: string[]
+  horizon_start: string
+  horizon_end: string
+}
+
+export interface PlannerBriefTopic {
+  title: string
+  detail: string
+}
+
+export interface PlannerBrief {
+  title: string
+  headline: string
+  executiveSummary: string
+  topics: PlannerBriefTopic[]
+}
+
 export interface ForecastEnginePreview {
   summary: ForecastEngineSummary
+  controls: {
+    planningWindows: ForecastControlOption[]
+    products: ForecastControlOption[]
+  }
+  sourceSummary: {
+    mode: 'live' | 'imported_bundle'
+    label: string
+    packageName: string | null
+    note: string
+  }
+  plannerBrief: PlannerBrief
+  manufacturePlan: ManufacturePlanPoint[]
+  productionRecommendations: PlannerRecommendation[]
   forecastOutput: ForecastOutputRow[]
   accuracyReport: ForecastAccuracyRow[]
   exceptions: ForecastExceptionRow[]
@@ -119,12 +185,26 @@ function buildParams(params: ForecastEngineParams) {
   if (params.toDate) requestParams.toDate = params.toDate
   if (params.forecastDays) requestParams.forecastDays = params.forecastDays
   if (params.backtestDays) requestParams.backtestDays = params.backtestDays
+  if (params.productId) requestParams.productId = params.productId
+  if (params.planningWindow) requestParams.planningWindow = params.planningWindow
 
   return requestParams
 }
 
+function buildImportFormData(bundle: File, params: ForecastEngineParams) {
+  const formData = new FormData()
+  formData.append('bundle', bundle)
+
+  const requestParams = buildParams(params)
+  Object.entries(requestParams).forEach(([key, value]) => {
+    formData.append(key, String(value))
+  })
+
+  return formData
+}
+
 function getFallbackReportFilename() {
-  return `ars_demand_forecast_engine_${new Date().toISOString().slice(0, 10)}.zip`
+  return `ars_demand_forecast_planner_${new Date().toISOString().slice(0, 10)}.pdf`
 }
 
 function parseDownloadFilename(contentDisposition: string | undefined) {
@@ -145,11 +225,40 @@ export async function fetchForecastEnginePreview(params: ForecastEngineParams) {
   return data
 }
 
+export async function fetchImportedForecastEnginePreview(
+  bundle: File,
+  params: ForecastEngineParams,
+) {
+  const { data } = await apiClient.post<ForecastEnginePreview>(
+    '/forecast-engine/ars-demand/import-preview',
+    buildImportFormData(bundle, params),
+  )
+  return data
+}
+
 export async function downloadForecastEngineReport(params: ForecastEngineParams) {
   const response = await apiClient.get<Blob>('/forecast-engine/ars-demand/report', {
     params: buildParams(params),
     responseType: 'blob',
   })
+
+  return {
+    blob: response.data,
+    filename: parseDownloadFilename(response.headers['content-disposition']),
+  }
+}
+
+export async function downloadImportedForecastEngineReport(
+  bundle: File,
+  params: ForecastEngineParams,
+) {
+  const response = await apiClient.post<Blob>(
+    '/forecast-engine/ars-demand/import-report',
+    buildImportFormData(bundle, params),
+    {
+      responseType: 'blob',
+    },
+  )
 
   return {
     blob: response.data,
