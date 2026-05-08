@@ -178,6 +178,15 @@ export interface ForecastEnginePreview {
   aiExplanations: ForecastAiExplanationRow[]
 }
 
+const defaultPlanningWindows: ForecastControlOption[] = [
+  { value: 'next_week', label: 'Next week', days: 7 },
+  { value: 'next_2_weeks', label: 'Next 2 weeks', days: 14 },
+  { value: 'next_month', label: 'Next month', days: 30 },
+  { value: 'next_quarter', label: 'Next quarter', days: 90 },
+  { value: 'next_6_months', label: 'Next 6 months', days: 180 },
+  { value: 'next_year', label: 'Next year', days: 365 },
+]
+
 function buildParams(params: ForecastEngineParams) {
   const requestParams: Record<string, string | number> = {}
 
@@ -217,23 +226,172 @@ function parseDownloadFilename(contentDisposition: string | undefined) {
   return basicMatch?.[1]?.trim() || getFallbackReportFilename()
 }
 
+function buildFallbackProducts(rows: ForecastOutputRow[]) {
+  const productMap = new Map<string, ForecastControlOption>()
+
+  rows.forEach((row) => {
+    if (!productMap.has(row.product_id)) {
+      productMap.set(row.product_id, {
+        value: row.product_id,
+        label: row.product_name,
+      })
+    }
+  })
+
+  return [
+    { value: '', label: 'All products' },
+    ...[...productMap.values()].sort((left, right) =>
+      left.label.localeCompare(right.label),
+    ),
+  ]
+}
+
+function buildFallbackManufacturePlan(rows: ForecastOutputRow[]): ManufacturePlanPoint[] {
+  const grouped = new Map<
+    string,
+    {
+      replenishment: number
+      retail: number
+    }
+  >()
+
+  rows.forEach((row) => {
+    const bucket = grouped.get(row.forecast_date) ?? {
+      replenishment: 0,
+      retail: 0,
+    }
+    if (row.demand_type === 'REPLENISHMENT_DEMAND') {
+      bucket.replenishment += row.forecast_cases
+    } else {
+      bucket.retail += row.forecast_cases
+    }
+    grouped.set(row.forecast_date, bucket)
+  })
+
+  return [...grouped.entries()]
+    .map(([date, value]) => ({
+      date,
+      replenishment_forecast_cases: value.replenishment,
+      retail_offtake_forecast_cases: value.retail,
+      total_forecast_cases: Math.max(value.replenishment, value.retail),
+      recommended_manufacture_cases: Math.max(value.replenishment, value.retail),
+    }))
+    .sort((left, right) => left.date.localeCompare(right.date))
+}
+
+function buildFallbackPlannerBrief(
+  summary: ForecastEngineSummary,
+  sourceLabel: string,
+): PlannerBrief {
+  return {
+    title: 'Manufacturing outlook for the selected horizon',
+    headline:
+      'The planner view is using the forecast rows that are currently available from the forecast engine response.',
+    executiveSummary:
+      'This fallback view keeps the Forecast Engine stable while the planner report fields are still missing from the API response.',
+    topics: [
+      {
+        title: 'Forecast window',
+        detail: `Future demand runs from ${summary.forecastStartDate} to ${summary.forecastEndDate}.`,
+      },
+      {
+        title: 'Source',
+        detail: sourceLabel,
+      },
+      {
+        title: 'Planner note',
+        detail:
+          'The backend response does not yet include the richer planner summary fields, so the frontend is deriving a safe fallback view instead of crashing.',
+      },
+    ],
+  }
+}
+
+function normalizeForecastPreview(
+  data: Partial<ForecastEnginePreview>,
+  params: ForecastEngineParams,
+  sourceMode: 'live' | 'imported_bundle',
+  packageName?: string | null,
+): ForecastEnginePreview {
+  const forecastOutput = data.forecastOutput ?? []
+  const forecastStartDate =
+    data.summary?.forecastStartDate ?? forecastOutput[0]?.forecast_date ?? ''
+  const forecastEndDate =
+    data.summary?.forecastEndDate ??
+    forecastOutput[forecastOutput.length - 1]?.forecast_date ??
+    ''
+
+  const planningWindow = data.summary?.planningWindow ?? params.planningWindow ?? 'next_month'
+  const sourceLabel =
+    data.sourceSummary?.label ??
+    (sourceMode === 'imported_bundle'
+      ? 'Imported export bundle'
+      : 'Live demand data')
+  const sourceNote =
+    data.sourceSummary?.note ??
+    (sourceMode === 'imported_bundle'
+      ? 'Planner view reconstructed from the uploaded export bundle.'
+      : 'Forecast calculated from the current platform data.')
+
+  const summary: ForecastEngineSummary = {
+    generatedAt: data.summary?.generatedAt ?? new Date().toISOString(),
+    forecastStartDate,
+    forecastEndDate,
+    historyStartDate: data.summary?.historyStartDate ?? params.fromDate ?? '',
+    historyEndDate: data.summary?.historyEndDate ?? params.toDate ?? '',
+    forecastRows: data.summary?.forecastRows ?? forecastOutput.length,
+    exceptions: data.summary?.exceptions ?? data.exceptions?.length ?? 0,
+    aiSignals: data.summary?.aiSignals ?? data.aiExplanations?.length ?? 0,
+    averageConfidenceScore: data.summary?.averageConfidenceScore ?? 0,
+    averageWape: data.summary?.averageWape ?? null,
+    modelVersion: data.summary?.modelVersion ?? 'ARS-HYBRID-WMA-1.0',
+    planningWindow,
+    selectedProductId: data.summary?.selectedProductId ?? params.productId ?? null,
+    sourceMode: data.summary?.sourceMode ?? sourceMode,
+  }
+
+  return {
+    summary,
+    controls: {
+      planningWindows: data.controls?.planningWindows ?? defaultPlanningWindows,
+      products: data.controls?.products ?? buildFallbackProducts(forecastOutput),
+    },
+    sourceSummary: {
+      mode: data.sourceSummary?.mode ?? sourceMode,
+      label: sourceLabel,
+      packageName: data.sourceSummary?.packageName ?? packageName ?? null,
+      note: sourceNote,
+    },
+    plannerBrief:
+      data.plannerBrief ?? buildFallbackPlannerBrief(summary, sourceNote),
+    manufacturePlan:
+      data.manufacturePlan ?? buildFallbackManufacturePlan(forecastOutput),
+    productionRecommendations: data.productionRecommendations ?? [],
+    forecastOutput,
+    accuracyReport: data.accuracyReport ?? [],
+    exceptions: data.exceptions ?? [],
+    confidenceScores: data.confidenceScores ?? [],
+    aiExplanations: data.aiExplanations ?? [],
+  }
+}
+
 export async function fetchForecastEnginePreview(params: ForecastEngineParams) {
-  const { data } = await apiClient.get<ForecastEnginePreview>(
+  const { data } = await apiClient.get<Partial<ForecastEnginePreview>>(
     '/forecast-engine/ars-demand/preview',
     { params: buildParams(params) },
   )
-  return data
+  return normalizeForecastPreview(data, params, 'live')
 }
 
 export async function fetchImportedForecastEnginePreview(
   bundle: File,
   params: ForecastEngineParams,
 ) {
-  const { data } = await apiClient.post<ForecastEnginePreview>(
+  const { data } = await apiClient.post<Partial<ForecastEnginePreview>>(
     '/forecast-engine/ars-demand/import-preview',
     buildImportFormData(bundle, params),
   )
-  return data
+  return normalizeForecastPreview(data, params, 'imported_bundle', bundle.name)
 }
 
 export async function downloadForecastEngineReport(params: ForecastEngineParams) {

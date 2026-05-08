@@ -160,8 +160,8 @@ export default function DemandForecastEngineSection() {
   const [feedback, setFeedback] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const planningOptions = preview?.controls.planningWindows ?? defaultPlanningWindows
-  const productOptions = preview?.controls.products ?? [{ value: '', label: 'All products' }]
+  const planningOptions = preview?.controls?.planningWindows ?? defaultPlanningWindows
+  const productOptions = preview?.controls?.products ?? [{ value: '', label: 'All products' }]
   const forecastDays = resolvePlanningDays(planningWindow, planningOptions)
 
   const readParams = (): ForecastEngineParams | null => {
@@ -213,8 +213,8 @@ export default function DemandForecastEngineSection() {
           : await fetchForecastEnginePreview(params)
 
       setPreview(data)
-      setPlanningWindow(data.summary.planningWindow)
-      setProductId(data.summary.selectedProductId ?? '')
+      setPlanningWindow(data.summary.planningWindow ?? params.planningWindow ?? 'next_month')
+      setProductId(data.summary.selectedProductId ?? params.productId ?? '')
       setFeedback(
         sourceMode === 'imported_bundle'
           ? `${bundleFile?.name ?? 'Bundle'} loaded into the planner.`
@@ -280,11 +280,11 @@ export default function DemandForecastEngineSection() {
 
   const summary = preview?.summary
   const plannerBrief = preview?.plannerBrief
-  const topForecasts = preview?.forecastOutput.slice(0, 10) ?? []
-  const exceptionRows = preview?.exceptions.slice(0, 6) ?? []
-  const accuracyRows = preview?.accuracyReport.slice(0, 6) ?? []
-  const aiRows = preview?.aiExplanations.slice(0, 5) ?? []
-  const recommendations = preview?.productionRecommendations.slice(0, 8) ?? []
+  const topForecasts = preview?.forecastOutput?.slice(0, 10) ?? []
+  const exceptionRows = preview?.exceptions?.slice(0, 6) ?? []
+  const accuracyRows = preview?.accuracyReport?.slice(0, 6) ?? []
+  const aiRows = preview?.aiExplanations?.slice(0, 5) ?? []
+  const recommendations = preview?.productionRecommendations?.slice(0, 8) ?? []
   const manufacturePlan = preview?.manufacturePlan ?? []
 
   const selectedProductLabel = useMemo(() => {
