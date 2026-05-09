@@ -19,6 +19,7 @@ const navigationItems: Array<{ key: AdminSection; label: string }> = [
   { key: 'approvals', label: 'Approvals' },
   { key: 'orders', label: 'Orders' },
   { key: 'stocks', label: 'Stocks' },
+  { key: 'report-dashboard', label: 'Report Dashboard' },
 ]
 const DEMAND_PLANNER_NAVIGATION_ITEMS: Array<{ key: AdminSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
