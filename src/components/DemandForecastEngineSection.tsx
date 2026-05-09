@@ -168,9 +168,45 @@ function buildManufactureSummary(
         : recommendation.product_name,
     totalCases: recommendation.recommended_production_cases,
     dailyCases: recommendation.suggested_daily_manufacture_cases,
+    currentStockCases: recommendation.current_stock_cases,
+    requiredCases: recommendation.required_cases,
+    forecastCases: recommendation.forecast_cases,
     horizonStart: recommendation.horizon_start,
     horizonEnd: recommendation.horizon_end,
   }))
+}
+
+function buildScopeStatus(recommendations: PlannerRecommendation[]) {
+  if (recommendations.length === 0) {
+    return null
+  }
+
+  const totals = recommendations.reduce(
+    (accumulator, recommendation) => ({
+      totalForecastCases:
+        accumulator.totalForecastCases + recommendation.forecast_cases,
+      totalRequiredCases:
+        accumulator.totalRequiredCases + recommendation.required_cases,
+      totalCurrentStockCases:
+        accumulator.totalCurrentStockCases + recommendation.current_stock_cases,
+      totalRecommendedCases:
+        accumulator.totalRecommendedCases +
+        recommendation.recommended_production_cases,
+    }),
+    {
+      totalForecastCases: 0,
+      totalRequiredCases: 0,
+      totalCurrentStockCases: 0,
+      totalRecommendedCases: 0,
+    },
+  )
+
+  return {
+    ...totals,
+    allZeroBuild: recommendations.every(
+      (recommendation) => recommendation.recommended_production_cases <= 0,
+    ),
+  }
 }
 
 function formatChartDateLabel(date: string, cadence: 'daily' | 'weekly' | 'monthly') {
@@ -331,7 +367,7 @@ export default function DemandForecastEngineSection() {
       )
       setError(
         sourceMode === 'imported_bundle' && message === 'Network Error'
-          ? 'Imported ZIP mode is not reachable right now. If this is the deployed server, it still needs the latest forecast import backend endpoints.'
+          ? 'The browser could not submit the ZIP bundle just now. Hard refresh this page first. If it still fails, you are likely on an older cached frontend or a blocked network path rather than a missing import route.'
           : message,
       )
     } finally {
@@ -374,7 +410,7 @@ export default function DemandForecastEngineSection() {
       )
       setError(
         sourceMode === 'imported_bundle' && message === 'Network Error'
-          ? 'The imported-bundle PDF route is not reachable right now. If this is the deployed server, it still needs the latest forecast import backend endpoints.'
+          ? 'The browser could not reach the imported-bundle PDF request just now. Hard refresh this page first. If it still fails, you are likely on an older cached frontend or a blocked network path.'
           : message,
       )
     } finally {
@@ -405,6 +441,10 @@ export default function DemandForecastEngineSection() {
   const manufactureSummary = useMemo(
     () => buildManufactureSummary(recommendations, selectedProductLabel),
     [recommendations, selectedProductLabel],
+  )
+  const scopeStatus = useMemo(
+    () => buildScopeStatus(recommendations),
+    [recommendations],
   )
 
   return (
@@ -692,6 +732,32 @@ export default function DemandForecastEngineSection() {
             </span>
           </div>
 
+          {scopeStatus?.allZeroBuild ? (
+            <div className="mt-4 rounded-[1rem] border border-[#d7e4d2] bg-[#f8fbf5] px-4 py-4 text-sm text-[#5d6d60]">
+              {scopeStatus.totalForecastCases > 0 ? (
+                <p className="leading-7">
+                  This zero line is currently a real planner result, not a chart error. Across the visible scope, projected demand is{' '}
+                  <span className="font-semibold text-[#2f3b2c]">
+                    {formatNumber(scopeStatus.totalForecastCases)}
+                  </span>{' '}
+                  cases and required demand plus safety stock is{' '}
+                  <span className="font-semibold text-[#2f3b2c]">
+                    {formatNumber(scopeStatus.totalRequiredCases)}
+                  </span>{' '}
+                  cases, while current stock already sits at{' '}
+                  <span className="font-semibold text-[#2f3b2c]">
+                    {formatNumber(scopeStatus.totalCurrentStockCases)}
+                  </span>{' '}
+                  cases.
+                </p>
+              ) : (
+                <p className="leading-7">
+                  This zero line is currently a real planner result, not a chart error. The selected scope is forecasting no cases in this horizon, so no additional manufacture is needed right now.
+                </p>
+              )}
+            </div>
+          ) : null}
+
           <div className="mt-5 grid gap-3">
             {manufactureSummary.map((item) => (
               <div
@@ -699,10 +765,14 @@ export default function DemandForecastEngineSection() {
                 className="rounded-[1rem] border border-[#eadfd3] bg-[#fffaf4] px-4 py-4 text-sm text-[#6d645c]"
               >
                 <p className="font-semibold text-[#2f3b2c]">
-                  Manufacture {formatNumber(item.totalCases)} cases of {item.productLabel}
+                  {item.totalCases > 0
+                    ? `Manufacture ${formatNumber(item.totalCases)} cases of ${item.productLabel}`
+                    : `No additional manufacture needed for ${item.productLabel}`}
                 </p>
                 <p className="mt-2 leading-6">
-                  Plan window: {item.horizonStart} to {item.horizonEnd} | Suggested pace: {formatNumber(item.dailyCases)} cases per day
+                  {item.totalCases > 0
+                    ? `Plan window: ${item.horizonStart} to ${item.horizonEnd} | Suggested pace: ${formatNumber(item.dailyCases)} cases per day`
+                    : `Plan window: ${item.horizonStart} to ${item.horizonEnd} | Current stock ${formatNumber(item.currentStockCases)} cases already covers the required ${formatNumber(item.requiredCases)} cases.`}
                 </p>
               </div>
             ))}
