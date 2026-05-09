@@ -95,6 +95,39 @@ export interface InsightPromotionImpactRow {
   estimated_retail_offtake_cases: number
 }
 
+export interface InsightPromotionProductImpactRow {
+  product_id: string
+  product_name: string
+  promoted_ordered_cases: number
+  promoted_estimated_retail_offtake_cases: number
+  total_ordered_cases: number
+  total_estimated_retail_offtake_cases: number
+}
+
+export interface InsightProductMomentumRow {
+  product_id: string
+  product_name: string
+  ordered_cases: number
+  delivered_cases: number
+  estimated_retail_offtake_cases: number
+  demand_signal_cases: number
+}
+
+export interface InsightCustomerSalesByProductRow {
+  product_id: string
+  product_name: string
+  estimated_retail_offtake_cases: number
+  confidence_score: number
+}
+
+export interface InsightOrderVsCustomerSalesRow {
+  product_id: string
+  product_name: string
+  ordered_cases: number
+  estimated_retail_offtake_cases: number
+  gap_cases: number
+}
+
 export interface InsightStockoutImpactRow {
   product_id: string
   product_name: string
@@ -109,9 +142,88 @@ export interface InsightCompetitorPressureRow {
   high_severity: number
 }
 
+export interface InsightProductDamageRow {
+  product_id: string | null
+  product_name: string
+  damaged_units: number
+  expired_units: number
+  total_loss_units: number
+}
+
+export interface InsightWarehouseDamageRow {
+  warehouse_id: string | null
+  warehouse_name: string
+  damaged_units: number
+  expired_units: number
+  total_loss_units: number
+  affected_products: number
+}
+
+export interface InsightOsaIssueRow {
+  label: string
+  issue_type: string
+  product_name: string | null
+  warehouse_name: string
+  issue_count: number
+  affected_outlets: number
+}
+
+export interface InsightCompetitorRiskVsSalesRow {
+  label: string
+  competitor_mentions: number
+  ordered_cases: number
+  estimated_retail_offtake_cases: number
+}
+
 export interface InsightFeedbackThemeRow {
   theme: string
   count: number
+}
+
+export interface InsightDissatisfiedShopRow {
+  shop_name: string
+  territory_name: string
+  warehouse_name: string
+  average_rating: number
+  feedback_count: number
+  latest_comment: string
+}
+
+export interface InsightSalesRepIssueRow {
+  sales_rep_name: string
+  territory_name: string
+  warehouse_name: string
+  issue_count: number
+  warehouse_issue_count: number
+  route_issue_count: number
+  critical_count: number
+  dominant_issue: string
+}
+
+export interface InsightComplianceViolationRow {
+  shop_name: string
+  territory_name: string
+  warehouse_name: string
+  violation_count: number
+  planogram_failures: number
+  posm_failures: number
+}
+
+export interface InsightWarehouseRiskRow {
+  warehouse_name: string
+  delivery_gap_cases: number
+  stockout_count: number
+  damage_units: number
+  warehouse_issue_count: number
+  risk_score: number
+}
+
+export interface InsightRecommendedActionRow {
+  title: string
+  owner: string
+  priority: 'HIGH' | 'MEDIUM' | 'LOW'
+  reason: string
+  metric: string
 }
 
 export interface InsightVisitCoverageRow {
@@ -177,12 +289,28 @@ export interface InsightCenterDashboard {
     territoryHeatmap: InsightHeatmapRow[]
     demandSplit: InsightDemandSplitRow[]
     promotionImpact: InsightPromotionImpactRow[]
+    promotionProductImpact: InsightPromotionProductImpactRow[]
+    productMomentum: {
+      highest: InsightProductMomentumRow[]
+      lowest: InsightProductMomentumRow[]
+    }
+    customerSalesByProduct: InsightCustomerSalesByProductRow[]
+    orderVsCustomerSales: InsightOrderVsCustomerSalesRow[]
     stockoutImpact: InsightStockoutImpactRow[]
+    damageByProduct: InsightProductDamageRow[]
+    damageByWarehouse: InsightWarehouseDamageRow[]
+    osaIssues: InsightOsaIssueRow[]
     competitorPressure: InsightCompetitorPressureRow[]
+    competitorRiskVsSales: InsightCompetitorRiskVsSalesRow[]
     feedbackThemes: InsightFeedbackThemeRow[]
+    dissatisfiedShops: InsightDissatisfiedShopRow[]
+    complianceViolations: InsightComplianceViolationRow[]
+    salesRepIssues: InsightSalesRepIssueRow[]
+    warehouseRisk: InsightWarehouseRiskRow[]
     visitCoverageConfidence: InsightVisitCoverageRow[]
     waterfall: InsightWaterfallRow[]
     exceptions: InsightExceptionRow[]
+    recommendedActions: InsightRecommendedActionRow[]
   }
   drilldowns: InsightDrilldownRow[]
   reportLinks: {
