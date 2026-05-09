@@ -268,7 +268,7 @@ export default function AdminDashboard() {
       module.route === '/admin/warehouses',
   )
   const demandPlannerModules = dashboardModules.filter((module) =>
-    DEMAND_PLANNER_MODULE_ROUTES.has(module.route),
+    DEMAND_PLANNER_MODULE_ROUTES.has(module.route) || ('section' in module && module.section === 'report-dashboard'),
   )
   const demandPlannerNavigationItems = isDemandPlannerApproved
     ? DEMAND_PLANNER_NAVIGATION_ITEMS
@@ -545,7 +545,9 @@ export default function AdminDashboard() {
             key={module.title}
             type="button"
             onClick={() => {
-              if (module.route) {
+              if ('section' in module && module.section) {
+                syncSection(module.section as AdminSection)
+              } else if (module.route) {
                 navigate(module.route)
               }
             }}
