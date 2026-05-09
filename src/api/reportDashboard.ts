@@ -99,6 +99,7 @@ export interface DemandPlannerReport {
   content: string
   isCritical: boolean
   criticalReason: string | null
+  attachmentUrl: string | null
   createdAt: string
   updatedAt: string
   author: {
@@ -199,10 +200,19 @@ export async function createPlannerReport(payload: {
   content: string
   isCritical?: boolean
   criticalReason?: string
+  attachment?: File | null
 }): Promise<DemandPlannerReport> {
+  const form = new FormData()
+  form.append('title', payload.title)
+  form.append('content', payload.content)
+  if (payload.isCritical !== undefined) form.append('isCritical', String(payload.isCritical))
+  if (payload.criticalReason) form.append('criticalReason', payload.criticalReason)
+  if (payload.attachment) form.append('attachment', payload.attachment)
+
   const res = await apiClient.post<DemandPlannerReport>(
     '/report-dashboard/planner-reports',
-    payload,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
   )
   return res.data
 }

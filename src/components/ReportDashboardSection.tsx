@@ -456,6 +456,7 @@ function CriticalReportsTab() {
 function PlannerSubmitTab() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [attachment, setAttachment] = useState<File | null>(null)
   const [showCriticalPopup, setShowCriticalPopup] = useState(false)
   const [criticalReason, setCriticalReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -476,9 +477,11 @@ function PlannerSubmitTab() {
         content: content.trim(),
         isCritical,
         criticalReason: isCritical ? criticalReason.trim() : undefined,
+        attachment,
       })
       setTitle('')
       setContent('')
+      setAttachment(null)
       setCriticalReason('')
       setShowCriticalPopup(false)
       setFeedback({ type: 'success', message: isCritical ? 'Report saved as critical.' : 'Report saved successfully.' })
@@ -534,6 +537,18 @@ function PlannerSubmitTab() {
             placeholder="Write your report here..."
             className="w-full rounded-[1rem] border border-[#d6dfd8] bg-[#fffdfb] px-4 py-3 text-sm leading-6 text-[#2f4540] outline-none focus:border-[#6e9d94]"
           />
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-[#3f5652]">Attach PDF <span className="font-normal text-[#8a6c58]">(optional)</span></label>
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={(e) => setAttachment(e.target.files?.[0] ?? null)}
+            className="w-full rounded-[1rem] border border-[#d6dfd8] bg-[#fffdfb] px-4 py-2.5 text-sm text-[#2f4540] file:mr-3 file:rounded-[0.6rem] file:border-0 file:bg-[#8b5a3a] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
+          />
+          {attachment && (
+            <p className="mt-1.5 text-xs text-[#6e9d94]">{attachment.name} selected</p>
+          )}
         </div>
         <div className="flex gap-3">
           <button
@@ -676,9 +691,20 @@ function PlannerViewTab() {
                     </p>
                   )}
                   {expandedId === report.id && (
-                    <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#4d3020]">
-                      {report.content}
-                    </p>
+                    <div className="mt-3 space-y-3">
+                      <p className="whitespace-pre-wrap text-sm leading-6 text-[#4d3020]">{report.content}</p>
+                      {report.attachmentUrl && (
+                        <a
+                          href={report.attachmentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-[0.8rem] border border-[#d7baa3] px-3 py-1.5 text-xs font-semibold text-[#6e4d3b] transition duration-200 hover:border-[#c9976f]"
+                        >
+                          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          View attachment
+                        </a>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div className="flex shrink-0 gap-2">

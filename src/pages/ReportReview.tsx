@@ -162,7 +162,7 @@ export default function ReportReview() {
       setActivePopup(null)
       setPopupReason('')
       setActionSuccess('Sales rep has been notified. Returning to report dashboard...')
-      setTimeout(() => navigate('/admin/report-dashboard'), 2000)
+      setTimeout(() => navigate('/admin/dashboard?section=report-dashboard'), 2000)
     } catch (e) {
       setActionError(getApiErrorMessage(e, 'Failed to send notification.'))
     } finally {
@@ -178,7 +178,7 @@ export default function ReportReview() {
       await deleteSavedReport(id)
       setActivePopup(null)
       setActionSuccess('Report deleted. Returning...')
-      setTimeout(() => navigate('/admin/report-dashboard'), 1500)
+      setTimeout(() => navigate('/admin/dashboard?section=report-dashboard'), 1500)
     } catch (e) {
       setActionError(getApiErrorMessage(e, 'Failed to delete report.'))
     } finally {
@@ -206,7 +206,7 @@ export default function ReportReview() {
           <p className="text-sm text-[#8b1a1a]">{error ?? 'Report not found.'}</p>
           <button
             type="button"
-            onClick={() => navigate('/admin/report-dashboard')}
+            onClick={() => navigate('/admin/dashboard?section=report-dashboard')}
             className="mt-4 rounded-[1rem] border border-[#d7baa3] px-4 py-2 text-sm font-semibold text-[#6e4d3b]"
           >
             Back to Report Dashboard
@@ -284,7 +284,7 @@ export default function ReportReview() {
           {/* Back nav */}
           <button
             type="button"
-            onClick={() => navigate('/admin/report-dashboard')}
+            onClick={() => navigate('/admin/dashboard?section=report-dashboard')}
             className="flex items-center gap-2 text-sm font-semibold text-[#8a6c58] transition duration-200 hover:text-[#4d3020]"
           >
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
