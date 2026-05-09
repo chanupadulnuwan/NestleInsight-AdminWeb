@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../api/client'
 import { fetchTerritories } from '../api/territories'
@@ -13,9 +13,6 @@ import {
   fetchSavedReports,
   markReportAsRead,
   resolveCriticalReport,
-  saveReport,
-  saveCriticalReport,
-  warnSalesRep,
   type CriticalReportItem,
   type DemandPlannerReport,
   type InboxReportItem,
@@ -251,7 +248,7 @@ function SavedReportsTab() {
         fetchTerritories(),
       ])
       setReports(data)
-      setTerritories(terrs)
+      setTerritories(terrs.territories)
     } catch (e) {
       setError(getApiErrorMessage(e, 'Failed to load saved reports.'))
     } finally {
