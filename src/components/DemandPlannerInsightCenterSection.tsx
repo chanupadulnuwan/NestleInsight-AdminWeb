@@ -816,16 +816,17 @@ function CompetitorsTab({ dashboard }: { dashboard: InsightCenterDashboard | nul
         />
       </div>
       <div className="grid gap-6 xl:grid-cols-2">
-        <DetailCardsPanel
+        <SingleMetricBarsPanel
           title="Shop-owner feedback themes"
           description="These are the recurring themes appearing in feedback and comments captured during the selected period."
-          rows={(dashboard?.charts.feedbackThemes ?? []).map((row) => ({
-            key: row.theme,
-            title: row.theme,
-            value: `${row.count} mentions`,
-            detail: 'Theme count from shop-owner or field feedback text.',
-          }))}
+          rows={dashboard?.charts.feedbackThemes ?? []}
+          getKey={(row) => row.theme}
+          getLabel={(row) => row.theme}
+          getValue={(row) => row.count}
+          getDetail={() => 'Theme count from shop-owner or field feedback text.'}
           emptyMessage="No feedback themes have been detected yet."
+          colorClassName="bg-[#b6793f]"
+          suffix="mentions"
         />
         <DetailCardsPanel
           title="Most dissatisfied shop owners"
@@ -900,41 +901,50 @@ function OperationsTab({ dashboard }: { dashboard: InsightCenterDashboard | null
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <DetailCardsPanel
+        <SingleMetricBarsPanel
           title="Shops violating marketing rules"
           description="These shops are repeatedly failing planogram or POSM execution checks during store visits."
-          rows={(dashboard?.charts.complianceViolations ?? []).map((row) => ({
-            key: `${row.shop_name}-${row.warehouse_name}`,
-            title: `${row.shop_name} | ${row.violation_count} violations`,
-            value: `${row.planogram_failures} planogram / ${row.posm_failures} POSM`,
-            detail: `${row.territory_name} | ${row.warehouse_name}`,
-          }))}
+          rows={dashboard?.charts.complianceViolations ?? []}
+          getKey={(row) => `${row.shop_name}-${row.warehouse_name}`}
+          getLabel={(row) => row.shop_name}
+          getValue={(row) => row.violation_count}
+          getDetail={(row) =>
+            `${row.territory_name} | ${row.warehouse_name} | Rules broken: ${row.violated_rules.join(', ')} | ${row.planogram_failures} planogram / ${row.posm_failures} POSM`
+          }
           emptyMessage="No compliance violations were captured in this window."
+          colorClassName="bg-[#b6793f]"
+          suffix="violations"
         />
-        <DetailCardsPanel
+        <SingleMetricBarsPanel
           title="Sales-rep report issues"
           description="These rows summarize the sales reps carrying the heaviest route, warehouse, or market-execution burden in the selected window."
-          rows={(dashboard?.charts.salesRepIssues ?? []).map((row) => ({
-            key: `${row.sales_rep_name}-${row.warehouse_name}`,
-            title: `${row.sales_rep_name} | ${row.issue_count} issues`,
-            value: `${row.critical_count} critical`,
-            detail: `${row.territory_name} | ${row.warehouse_name} | dominant issue ${row.dominant_issue}`,
-          }))}
+          rows={dashboard?.charts.salesRepIssues ?? []}
+          getKey={(row) => `${row.sales_rep_name}-${row.warehouse_name}`}
+          getLabel={(row) => row.sales_rep_name}
+          getValue={(row) => row.issue_count}
+          getDetail={(row) =>
+            `${row.territory_name} | ${row.warehouse_name} | ${row.critical_count} critical | dominant issue ${row.dominant_issue}`
+          }
           emptyMessage="No sales-rep issue rows are available."
+          colorClassName="bg-[#8e6a3b]"
+          suffix="issues"
         />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <DetailCardsPanel
+        <SingleMetricBarsPanel
           title="Warehouse risk watchlist"
           description="These warehouses combine delivery gaps, stockouts, product loss, and warehouse-reported issues into a single operational watchlist."
-          rows={(dashboard?.charts.warehouseRisk ?? []).map((row) => ({
-            key: row.warehouse_name,
-            title: row.warehouse_name,
-            value: `Risk ${formatNumber(row.risk_score)}`,
-            detail: `${formatNumber(row.delivery_gap_cases)} delivery gap | ${row.stockout_count} stockouts | ${formatNumber(row.damage_units)} damaged units | ${row.warehouse_issue_count} warehouse issues`,
-          }))}
+          rows={dashboard?.charts.warehouseRisk ?? []}
+          getKey={(row) => row.warehouse_name}
+          getLabel={(row) => row.warehouse_name}
+          getValue={(row) => row.risk_score}
+          getDetail={(row) =>
+            `${formatNumber(row.delivery_gap_cases)} delivery gap | ${row.stockout_count} stockouts | ${formatNumber(row.damage_units)} damaged units | ${row.warehouse_issue_count} warehouse issues`
+          }
           emptyMessage="No warehouse risk rows are available."
+          colorClassName="bg-[#8e6a3b]"
+          suffix="risk"
         />
         <DetailCardsPanel
           title="Visit coverage and confidence"

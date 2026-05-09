@@ -207,6 +207,7 @@ export interface InsightComplianceViolationRow {
   violation_count: number
   planogram_failures: number
   posm_failures: number
+  violated_rules: string[]
 }
 
 export interface InsightWarehouseRiskRow {
