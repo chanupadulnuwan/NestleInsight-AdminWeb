@@ -212,7 +212,6 @@ export async function createPlannerReport(payload: {
   const res = await apiClient.post<DemandPlannerReport>(
     '/report-dashboard/planner-reports',
     form,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
   )
   return res.data
 }
