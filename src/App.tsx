@@ -18,6 +18,7 @@ import AdminSettingsPage from './pages/AdminSettingsPage'
 import PromotionManagement from './pages/PromotionManagement'
 import FieldMonitoring from './pages/FieldMonitoring'
 import FieldMonitoringEmployee from './pages/FieldMonitoringEmployee'
+import ReportReview from './pages/ReportReview'
 
 
 // Roles that belong to the Territory Manager portal
@@ -53,6 +54,7 @@ export default function App() {
 
       <Route path="/admin/field-monitoring" element={<FieldMonitoring />} />
       <Route path="/admin/field-monitoring/:userId" element={<FieldMonitoringEmployee />} />
+      <Route path="/admin/report-dashboard/review/:id" element={<ReportReview />} />
 
       {/* Territory Manager routes */}
       <Route path="/tm/warehouse" element={<TmWarehousePage />} />

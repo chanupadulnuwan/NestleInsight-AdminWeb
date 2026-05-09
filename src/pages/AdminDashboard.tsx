@@ -5,10 +5,11 @@ import { getApiErrorMessage } from '../api/client'
 import DemandForecastExportSection from '../components/DemandForecastExportSection'
 import DemandForecastEngineSection from '../components/DemandForecastEngineSection'
 import DemandPlannerInsightCenterSection from '../components/DemandPlannerInsightCenterSection'
+import ReportDashboardSection from '../components/ReportDashboardSection'
 import { approvePendingUser, fetchPendingUsers, rejectPendingUser } from '../api/users'
 import { useAuth } from '../context/AuthContext'
 
-type AdminSection = 'dashboard' | 'approvals' | 'orders' | 'stocks' | 'exports' | 'forecast-engine' | 'insight-center'
+type AdminSection = 'dashboard' | 'approvals' | 'orders' | 'stocks' | 'exports' | 'forecast-engine' | 'insight-center' | 'report-dashboard'
 
 const surfaceClassName =
   'rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]'
@@ -24,11 +25,15 @@ const DEMAND_PLANNER_NAVIGATION_ITEMS: Array<{ key: AdminSection; label: string 
   { key: 'exports', label: 'Exports' },
   { key: 'forecast-engine', label: 'Forecast Engine' },
   { key: 'insight-center', label: 'Insight Center' },
+  { key: 'report-dashboard', label: 'Report Dashboard' },
 ]
 
 const DEMAND_PLANNER_MODULE_ROUTES = new Set([
   '/admin/field-monitoring',
   '/admin/promotion-management',
+  '/admin/territories',
+  '/admin/warehouses',
+  '/admin/products',
 ])
 
 const dashboardModules = [
@@ -79,6 +84,15 @@ const dashboardModules = [
     action: 'Open promotion management',
     className: 'bg-gradient-to-br from-[#7a8a4a] via-[#6b7b3e] to-[#596832]',
     route: '/admin/promotion-management',
+  },
+  {
+    badge: 'Reports',
+    title: 'Report Dashboard',
+    description: 'Review daily sales rep reports, flag critical findings, and manage planner submissions.',
+    action: 'Open report dashboard',
+    className: 'bg-gradient-to-br from-[#4a7a8a] via-[#3e6e7c] to-[#305a68]',
+    route: null,
+    section: 'report-dashboard' as AdminSection,
   },
 ]
 
@@ -196,6 +210,18 @@ function NavGlyph({ name }: { name: AdminSection }) {
         <path d="M8 6.5h8" />
         <path d="m16 6.5-1.5-1.5" />
         <path d="m16 6.5-1.5 1.5" />
+      </svg>
+    )
+  }
+
+  if (name === 'report-dashboard') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M8 4.5h8" />
+        <path d="M8.5 3.5h7a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z" />
+        <path d="M9.5 9.5h5" />
+        <path d="M9.5 12.5h5" />
+        <path d="M9.5 15.5h3" />
       </svg>
     )
   }
@@ -433,6 +459,12 @@ export default function AdminDashboard() {
       description:
         'Explore visual planner analytics that keep exact shop ordering demand separate from estimated retail offtake with confidence scores and downloadable reports.',
     },
+    'report-dashboard': {
+      breadcrumb: 'Portal / Report Dashboard',
+      title: 'Report Dashboard',
+      description:
+        'Review daily sales rep submissions, flag critical findings, request revisions, and manage demand planner reports.',
+    },
   }
 
   const activeView = sectionDetails[activeSection]
@@ -448,11 +480,13 @@ export default function AdminDashboard() {
               key={module.title}
               type="button"
               onClick={() => {
-                if (module.route) {
+                if ('section' in module && module.section) {
+                  syncSection(module.section as AdminSection)
+                } else if (module.route) {
                   navigate(module.route)
                 }
               }}
-              className={`relative overflow-hidden rounded-[1.8rem] text-left text-white shadow-[0_22px_54px_rgba(64,30,15,0.18)] transition duration-300 hover:-translate-y-1 ${module.className} ${module.route ? 'cursor-pointer' : 'cursor-default'}`}
+              className={`relative overflow-hidden rounded-[1.8rem] text-left text-white shadow-[0_22px_54px_rgba(64,30,15,0.18)] transition duration-300 hover:-translate-y-1 ${module.className} cursor-pointer`}
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.24),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(255,255,255,0.18),_transparent_26%)]" />
               <div className="relative flex min-h-[18rem] flex-col">
@@ -783,6 +817,20 @@ export default function AdminDashboard() {
         </h2>
         <p className="mt-3 text-sm leading-7 text-[#7f6657]">
           This planner analytics workspace becomes available once the Demand Planner account is approved by an administrator.
+        </p>
+      </section>
+    )
+  } else if (activeSection === 'report-dashboard') {
+    content = isAdmin || isDemandPlannerApproved ? (
+      <ReportDashboardSection />
+    ) : (
+      <section className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
+        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Awaiting Review</p>
+        <h2 className="mt-3 text-[1.75rem] font-bold tracking-[-0.04em] text-[#4d3020]">
+          Report Dashboard access is unlocked after admin approval
+        </h2>
+        <p className="mt-3 text-sm leading-7 text-[#7f6657]">
+          This workspace becomes available once the Demand Planner account is approved by an administrator.
         </p>
       </section>
     )
