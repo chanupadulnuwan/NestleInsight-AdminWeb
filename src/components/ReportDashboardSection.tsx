@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../api/client'
+import { fetchEmployeeDetail } from '../api/fieldMonitoring'
 import { fetchTerritories } from '../api/territories'
 import type { TerritoryRecord } from '../api/territories'
 import {
@@ -8,6 +9,7 @@ import {
   deletePlannerReport,
   deleteSavedReport,
   fetchCriticalReports,
+  fetchDailyReportDetail,
   fetchPlannerReports,
   fetchReportInbox,
   fetchSavedReports,
@@ -18,6 +20,11 @@ import {
   type InboxReportItem,
   type SavedReportItem,
 } from '../api/reportDashboard'
+import {
+  buildFallbackEmployeeDetail,
+  downloadDailyReportPdf,
+  openDailyReportPdf,
+} from '../utils/reportDashboardPdf'
 
 const surfaceClassName =
   'rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]'
@@ -126,11 +133,103 @@ function PopupOverlay({
 
 // ── Inbox Tab ──────────────────────────────────────────────────────────────────
 
+function useDailyReportPdfActions() {
+  const [pdfError, setPdfError] = useState<string | null>(null)
+  const [activePdfAction, setActivePdfAction] = useState<string | null>(null)
+
+  const handlePdfAction = async (
+    dailyReportId: string,
+    action: 'view' | 'download',
+  ) => {
+    setPdfError(null)
+    setActivePdfAction(`${action}:${dailyReportId}`)
+    try {
+      const reportDetail = await fetchDailyReportDetail(dailyReportId)
+      let detailForPdf: Awaited<ReturnType<typeof fetchEmployeeDetail>>
+      try {
+        detailForPdf = await fetchEmployeeDetail(
+          reportDetail.report.salesRep.id,
+          reportDetail.report.reportDate,
+        )
+      } catch {
+        detailForPdf = buildFallbackEmployeeDetail(reportDetail)
+      }
+
+      if (action === 'view') {
+        openDailyReportPdf(detailForPdf)
+      } else {
+        downloadDailyReportPdf(detailForPdf)
+      }
+    } catch (e) {
+      setPdfError(getApiErrorMessage(e, 'Failed to prepare report PDF.'))
+    } finally {
+      setActivePdfAction(null)
+    }
+  }
+
+  const isPdfActionLoading = (
+    dailyReportId: string,
+    action: 'view' | 'download',
+  ) => activePdfAction === `${action}:${dailyReportId}`
+
+  return {
+    pdfError,
+    handleViewPdf: (dailyReportId: string) =>
+      void handlePdfAction(dailyReportId, 'view'),
+    handleDownloadPdf: (dailyReportId: string) =>
+      void handlePdfAction(dailyReportId, 'download'),
+    isPdfActionLoading,
+  }
+}
+
+function ReportPdfButtons({
+  dailyReportId,
+  onViewPdf,
+  onDownloadPdf,
+  isViewLoading,
+  isDownloadLoading,
+}: {
+  dailyReportId: string
+  onViewPdf: (dailyReportId: string) => void
+  onDownloadPdf: (dailyReportId: string) => void
+  isViewLoading: boolean
+  isDownloadLoading: boolean
+}) {
+  const isBusy = isViewLoading || isDownloadLoading
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => onViewPdf(dailyReportId)}
+        disabled={isBusy}
+        className="rounded-[0.8rem] border border-[#d7baa3] px-3 py-1.5 text-xs font-semibold text-[#6e4d3b] transition duration-200 hover:border-[#c9976f] disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isViewLoading ? 'Preparing PDF...' : 'View PDF'}
+      </button>
+      <button
+        type="button"
+        onClick={() => onDownloadPdf(dailyReportId)}
+        disabled={isBusy}
+        className="rounded-[0.8rem] border border-[#d7baa3] bg-[#fff9f5] px-3 py-1.5 text-xs font-semibold text-[#6e4d3b] transition duration-200 hover:border-[#c9976f] disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isDownloadLoading ? 'Preparing PDF...' : 'Download PDF'}
+      </button>
+    </>
+  )
+}
+
 function InboxTab() {
   const navigate = useNavigate()
   const [reports, setReports] = useState<InboxReportItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const {
+    pdfError,
+    handleViewPdf,
+    handleDownloadPdf,
+    isPdfActionLoading,
+  } = useDailyReportPdfActions()
 
   const load = async () => {
     setIsLoading(true)
@@ -163,6 +262,11 @@ function InboxTab() {
 
   return (
     <div className="grid gap-3">
+      {pdfError && (
+        <div className="rounded-[1rem] bg-[#fde8e8] px-4 py-3 text-sm font-semibold text-[#8b1a1a]">
+          {pdfError}
+        </div>
+      )}
       {reports.map((report) => (
         <div
           key={report.id}
@@ -189,6 +293,13 @@ function InboxTab() {
               <span className="text-xs text-[#8a6c58]">{formatDate(report.reportDate)}</span>
             </div>
             <div className="flex flex-wrap gap-2">
+              <ReportPdfButtons
+                dailyReportId={report.id}
+                onViewPdf={handleViewPdf}
+                onDownloadPdf={handleDownloadPdf}
+                isViewLoading={isPdfActionLoading(report.id, 'view')}
+                isDownloadLoading={isPdfActionLoading(report.id, 'download')}
+              />
               {!report.isRead && (
                 <button
                   type="button"
@@ -230,6 +341,12 @@ function SavedReportsTab() {
   const [deleteTarget, setDeleteTarget] = useState<SavedReportItem | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
+  const {
+    pdfError,
+    handleViewPdf,
+    handleDownloadPdf,
+    isPdfActionLoading,
+  } = useDailyReportPdfActions()
 
   const requiredConfirmText = deleteTarget
     ? `${deleteTarget.dailyReport.salesRep.firstName} ${deleteTarget.dailyReport.salesRep.lastName} ${deleteTarget.dailyReport.reportDate}`
@@ -294,6 +411,12 @@ function SavedReportsTab() {
         </PopupOverlay>
       )}
 
+      {pdfError && (
+        <div className="mb-4 rounded-[1rem] bg-[#fde8e8] px-4 py-3 text-sm font-semibold text-[#8b1a1a]">
+          {pdfError}
+        </div>
+      )}
+
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <select
           value={filters.territoryId}
@@ -342,7 +465,14 @@ function SavedReportsTab() {
                     <span className="text-xs text-[#8a6c58]">{formatDate(item.dailyReport.reportDate)}</span>
                     <Badge variant="success">Saved</Badge>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <ReportPdfButtons
+                      dailyReportId={item.dailyReportId}
+                      onViewPdf={handleViewPdf}
+                      onDownloadPdf={handleDownloadPdf}
+                      isViewLoading={isPdfActionLoading(item.dailyReportId, 'view')}
+                      isDownloadLoading={isPdfActionLoading(item.dailyReportId, 'download')}
+                    />
                     <button
                       type="button"
                       onClick={() => navigate(`/admin/report-dashboard/review/${item.dailyReportId}`)}
@@ -375,6 +505,12 @@ function CriticalReportsTab() {
   const [reports, setReports] = useState<CriticalReportItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const {
+    pdfError,
+    handleViewPdf,
+    handleDownloadPdf,
+    isPdfActionLoading,
+  } = useDailyReportPdfActions()
 
   const load = async () => {
     setIsLoading(true)
@@ -405,6 +541,11 @@ function CriticalReportsTab() {
 
   return (
     <div className="grid gap-3">
+      {pdfError && (
+        <div className="rounded-[1rem] bg-[#fde8e8] px-4 py-3 text-sm font-semibold text-[#8b1a1a]">
+          {pdfError}
+        </div>
+      )}
       {reports.map((item) => {
         const territory = item.dailyReport.route?.territory
         return (
@@ -427,7 +568,14 @@ function CriticalReportsTab() {
                   </p>
                 )}
               </div>
-              <div className="flex shrink-0 gap-2">
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <ReportPdfButtons
+                  dailyReportId={item.dailyReportId}
+                  onViewPdf={handleViewPdf}
+                  onDownloadPdf={handleDownloadPdf}
+                  isViewLoading={isPdfActionLoading(item.dailyReportId, 'view')}
+                  isDownloadLoading={isPdfActionLoading(item.dailyReportId, 'download')}
+                />
                 <button
                   type="button"
                   onClick={() => navigate(`/admin/report-dashboard/review/${item.dailyReportId}`)}
