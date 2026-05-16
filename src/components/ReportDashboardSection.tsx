@@ -81,6 +81,26 @@ function Badge({ children, variant = 'neutral' }: { children: React.ReactNode; v
   )
 }
 
+function inboxStatusBadge(report: InboxReportItem) {
+  if (report.reviewStatus === 'CRITICAL') {
+    return <Badge variant="critical">Critical</Badge>
+  }
+
+  if (report.reviewStatus === 'SAVED') {
+    return <Badge variant="success">Saved</Badge>
+  }
+
+  if (report.reviewStatus === 'WARNED') {
+    return <Badge variant="warning">Revision Requested</Badge>
+  }
+
+  if (report.reviewStatus === 'READ') {
+    return <Badge variant="neutral">Read</Badge>
+  }
+
+  return <Badge variant="success">Submitted</Badge>
+}
+
 // ── Popup overlay ──────────────────────────────────────────────────────────────
 
 function PopupOverlay({
@@ -283,9 +303,7 @@ function InboxTab() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               {!report.isRead && <Badge variant="warning">Unread</Badge>}
-              <Badge variant={report.status === 'SUBMITTED' ? 'success' : 'neutral'}>
-                {report.status === 'SUBMITTED' ? 'Submitted' : 'Draft'}
-              </Badge>
+              {inboxStatusBadge(report)}
               <span className="text-sm font-bold text-[#4d3020]">
                 {report.salesRep.firstName} {report.salesRep.lastName}
               </span>
@@ -307,7 +325,7 @@ function InboxTab() {
                 isViewLoading={isPdfActionLoading(report.id, 'view')}
                 isDownloadLoading={isPdfActionLoading(report.id, 'download')}
               />
-              {!report.isRead && report.status === 'SUBMITTED' && (
+              {!report.isRead && report.status === 'SUBMITTED' && !report.reviewStatus && (
                 <button
                   type="button"
                   onClick={() => void handleMarkRead(report)}
@@ -328,11 +346,6 @@ function InboxTab() {
           {report.repComments && (
             <p className="mt-3 line-clamp-2 text-sm leading-6 text-[#7f6657]">
               {report.repComments}
-            </p>
-          )}
-          {report.status === 'DRAFT' && (
-            <p className="mt-3 text-sm leading-6 text-[#8a6c58]">
-              This report is still a draft in field monitoring. Planner review actions unlock after the sales rep submits it.
             </p>
           )}
         </div>

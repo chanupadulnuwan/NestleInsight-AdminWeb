@@ -33,6 +33,7 @@ export default defineConfig(({ mode }) => {
         "/promotions": apiProxyTarget,
         "/sales-incidents": apiProxyTarget,
         "/outlets": apiProxyTarget,
+        "/report-dashboard": apiProxyTarget,
       },
     },
   };

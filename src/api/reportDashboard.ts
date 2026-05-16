@@ -21,6 +21,7 @@ export interface InboxReportItem {
   submittedAt: string | null
   repComments: string | null
   isRead: boolean
+  reviewStatus: 'READ' | 'SAVED' | 'CRITICAL' | 'WARNED' | null
   salesRep: InboxSalesRep
   territory: InboxTerritory | null
   routeSummary: Record<string, unknown> | null
@@ -112,11 +113,22 @@ export interface DemandPlannerReport {
   }
 }
 
+function expectArrayResponse<T>(data: unknown, message: string): T[] {
+  if (!Array.isArray(data)) {
+    throw new Error(message)
+  }
+
+  return data as T[]
+}
+
 // --- Inbox ---
 
 export async function fetchReportInbox(): Promise<InboxReportItem[]> {
-  const res = await apiClient.get<InboxReportItem[]>('/report-dashboard/inbox')
-  return res.data
+  const res = await apiClient.get('/report-dashboard/inbox')
+  return expectArrayResponse<InboxReportItem>(
+    res.data,
+    'Unexpected report dashboard inbox response. Check the backend route or dev proxy.',
+  )
 }
 
 export async function markReportAsRead(dailyReportId: string): Promise<AdminReportReview> {
@@ -168,10 +180,13 @@ export async function fetchSavedReports(filters?: {
   startDate?: string
   endDate?: string
 }): Promise<SavedReportItem[]> {
-  const res = await apiClient.get<SavedReportItem[]>('/report-dashboard/saved', {
+  const res = await apiClient.get('/report-dashboard/saved', {
     params: filters,
   })
-  return res.data
+  return expectArrayResponse<SavedReportItem>(
+    res.data,
+    'Unexpected saved reports response. Check the backend route or dev proxy.',
+  )
 }
 
 export async function deleteSavedReport(dailyReportId: string): Promise<{ message: string }> {
@@ -184,8 +199,11 @@ export async function deleteSavedReport(dailyReportId: string): Promise<{ messag
 // --- Critical Reports ---
 
 export async function fetchCriticalReports(): Promise<CriticalReportItem[]> {
-  const res = await apiClient.get<CriticalReportItem[]>('/report-dashboard/critical')
-  return res.data
+  const res = await apiClient.get('/report-dashboard/critical')
+  return expectArrayResponse<CriticalReportItem>(
+    res.data,
+    'Unexpected critical reports response. Check the backend route or dev proxy.',
+  )
 }
 
 export async function resolveCriticalReport(dailyReportId: string): Promise<AdminReportReview> {
@@ -230,10 +248,13 @@ export async function fetchPlannerReports(filters?: {
   if (filters?.endDate) params.endDate = filters.endDate
   if (filters?.isCritical !== undefined) params.isCritical = String(filters.isCritical)
 
-  const res = await apiClient.get<DemandPlannerReport[]>('/report-dashboard/planner-reports', {
+  const res = await apiClient.get('/report-dashboard/planner-reports', {
     params,
   })
-  return res.data
+  return expectArrayResponse<DemandPlannerReport>(
+    res.data,
+    'Unexpected planner reports response. Check the backend route or dev proxy.',
+  )
 }
 
 export async function deletePlannerReport(reportId: string): Promise<{ message: string }> {
