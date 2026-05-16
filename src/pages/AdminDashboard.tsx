@@ -19,7 +19,6 @@ const navigationItems: Array<{ key: AdminSection; label: string }> = [
   { key: 'approvals', label: 'Approvals' },
   { key: 'orders', label: 'Orders' },
   { key: 'stocks', label: 'Stocks' },
-  { key: 'report-dashboard', label: 'Report Dashboard' },
 ]
 const DEMAND_PLANNER_NAVIGATION_ITEMS: Array<{ key: AdminSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -267,6 +266,9 @@ export default function AdminDashboard() {
       module.route === '/admin/territories' ||
       module.route === '/admin/warehouses',
   )
+  const adminDashboardModules = dashboardModules.filter(
+    (module) => !('section' in module && module.section === 'report-dashboard'),
+  )
   const demandPlannerModules = dashboardModules.filter((module) =>
     (module.route !== null && DEMAND_PLANNER_MODULE_ROUTES.has(module.route)) || ('section' in module && module.section === 'report-dashboard'),
   )
@@ -476,7 +478,7 @@ export default function AdminDashboard() {
   if (activeSection === 'dashboard') {
     content = isAdmin ? (
       <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {dashboardModules.map((module) => (
+          {adminDashboardModules.map((module) => (
             <button
               key={module.title}
               type="button"
@@ -824,7 +826,7 @@ export default function AdminDashboard() {
       </section>
     )
   } else if (activeSection === 'report-dashboard') {
-    content = isAdmin || isDemandPlannerApproved ? (
+    content = isDemandPlannerApproved ? (
       <ReportDashboardSection />
     ) : (
       <section className={`${surfaceClassName} px-6 py-6 sm:px-7`}>

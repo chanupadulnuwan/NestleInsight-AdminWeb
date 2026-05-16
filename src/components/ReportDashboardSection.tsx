@@ -246,6 +246,10 @@ function InboxTab() {
   useEffect(() => { void load() }, [])
 
   const handleMarkRead = async (report: InboxReportItem) => {
+    if (report.status !== 'SUBMITTED') {
+      return
+    }
+
     try {
       await markReportAsRead(report.id)
       setReports((prev) =>
@@ -258,7 +262,7 @@ function InboxTab() {
 
   if (isLoading) return <LoadingState />
   if (error) return <ErrorState message={error} onRetry={load} />
-  if (reports.length === 0) return <EmptyState message="No new reports in inbox." />
+  if (reports.length === 0) return <EmptyState message="No sales rep reports found." />
 
   return (
     <div className="grid gap-3">
@@ -279,6 +283,9 @@ function InboxTab() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               {!report.isRead && <Badge variant="warning">Unread</Badge>}
+              <Badge variant={report.status === 'SUBMITTED' ? 'success' : 'neutral'}>
+                {report.status === 'SUBMITTED' ? 'Submitted' : 'Draft'}
+              </Badge>
               <span className="text-sm font-bold text-[#4d3020]">
                 {report.salesRep.firstName} {report.salesRep.lastName}
               </span>
@@ -300,7 +307,7 @@ function InboxTab() {
                 isViewLoading={isPdfActionLoading(report.id, 'view')}
                 isDownloadLoading={isPdfActionLoading(report.id, 'download')}
               />
-              {!report.isRead && (
+              {!report.isRead && report.status === 'SUBMITTED' && (
                 <button
                   type="button"
                   onClick={() => void handleMarkRead(report)}
@@ -321,6 +328,11 @@ function InboxTab() {
           {report.repComments && (
             <p className="mt-3 line-clamp-2 text-sm leading-6 text-[#7f6657]">
               {report.repComments}
+            </p>
+          )}
+          {report.status === 'DRAFT' && (
+            <p className="mt-3 text-sm leading-6 text-[#8a6c58]">
+              This report is still a draft in field monitoring. Planner review actions unlock after the sales rep submits it.
             </p>
           )}
         </div>

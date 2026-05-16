@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { getApiErrorMessage } from "../api/client";
 import {
   fetchEmployeeDetail,
@@ -18,6 +18,7 @@ import {
   downloadDailyReportPdf,
   openDailyReportPdf,
 } from "../utils/reportDashboardPdf";
+import { useAuth } from "../context/AuthContext";
 
 const surfaceClassName =
   "rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]";
@@ -116,6 +117,7 @@ type ActivePopup = "critical" | "warn" | "delete" | null;
 export default function ReportReview() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, isAuthLoading } = useAuth();
 
   const [data, setData] = useState<DailyReportDetail | null>(null);
   const [pdfDetail, setPdfDetail] = useState<EmployeeDetail | null>(null);
@@ -251,6 +253,25 @@ export default function ReportReview() {
     setPopupReason("");
   };
 
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-white px-4 py-8">
+        <div className="mx-auto max-w-4xl flex items-center gap-2 text-sm text-[#8a6c58]">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#d7baa3] border-t-[#8b5a3a]" />
+          Loading report...
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (user.role !== "DEMAND_PLANNER" || user.approvalStatus !== "APPROVED") {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white px-4 py-8">
@@ -304,6 +325,7 @@ export default function ReportReview() {
   > | null;
 
   const isSaved = review?.status === "SAVED";
+  const isSubmitted = report.status === "SUBMITTED";
 
   return (
     <>
@@ -408,6 +430,7 @@ export default function ReportReview() {
                   {report.salesRep.employeeId && (
                     <span>#{report.salesRep.employeeId}</span>
                   )}
+                  <span>Status: {report.status}</span>
                   <span>Report date: {formatDate(report.reportDate)}</span>
                   <span>Submitted: {formatDateTime(report.submittedAt)}</span>
                 </div>
@@ -431,30 +454,34 @@ export default function ReportReview() {
                 >
                   Download PDF
                 </button>
-                <button
-                  type="button"
-                  onClick={() => void handleSave()}
-                  disabled={isActioning || !!actionSuccess}
-                  className="rounded-[1rem] bg-[#8b5a3a] px-4 py-2.5 text-sm font-semibold text-white transition duration-200 hover:bg-[#73492f] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Save report
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActivePopup("critical")}
-                  disabled={isActioning}
-                  className="rounded-[1rem] border border-[#c9443a] px-4 py-2.5 text-sm font-semibold text-[#a03030] transition duration-200 hover:bg-[#fde8e8] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Save as critical
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActivePopup("warn")}
-                  disabled={isActioning}
-                  className="rounded-[1rem] border border-[#c97a3a] px-4 py-2.5 text-sm font-semibold text-[#8b5a1a] transition duration-200 hover:bg-[#fff3e0] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Request revision
-                </button>
+                {isSubmitted && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void handleSave()}
+                      disabled={isActioning || !!actionSuccess}
+                      className="rounded-[1rem] bg-[#8b5a3a] px-4 py-2.5 text-sm font-semibold text-white transition duration-200 hover:bg-[#73492f] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Save report
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActivePopup("critical")}
+                      disabled={isActioning}
+                      className="rounded-[1rem] border border-[#c9443a] px-4 py-2.5 text-sm font-semibold text-[#a03030] transition duration-200 hover:bg-[#fde8e8] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Save as critical
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActivePopup("warn")}
+                      disabled={isActioning}
+                      className="rounded-[1rem] border border-[#c97a3a] px-4 py-2.5 text-sm font-semibold text-[#8b5a1a] transition duration-200 hover:bg-[#fff3e0] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Request revision
+                    </button>
+                  </>
+                )}
                 {isSaved && (
                   <button
                     type="button"
@@ -476,6 +503,11 @@ export default function ReportReview() {
                 <p className="mt-2 text-sm leading-6 text-[#4d3020]">
                   {report.repComments}
                 </p>
+              </div>
+            )}
+            {!isSubmitted && (
+              <div className="mt-5 rounded-[1.1rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4 text-sm leading-6 text-[#7f6657]">
+                This report is still in draft status. You can inspect it here, but planner actions stay locked until the sales rep submits the final report.
               </div>
             )}
           </div>

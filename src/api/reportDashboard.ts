@@ -16,6 +16,7 @@ export interface InboxTerritory {
 
 export interface InboxReportItem {
   id: string
+  status: 'DRAFT' | 'SUBMITTED'
   reportDate: string
   submittedAt: string | null
   repComments: string | null
@@ -77,6 +78,7 @@ export interface CriticalReportItem {
 export interface DailyReportDetail {
   report: {
     id: string
+    status: 'DRAFT' | 'SUBMITTED'
     reportDate: string
     submittedAt: string | null
     repComments: string | null
