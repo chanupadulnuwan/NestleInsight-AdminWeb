@@ -298,6 +298,7 @@ export default function WarehousesPage() {
   })
 
   const totalInventoryCases = warehouses.reduce((sum, warehouse) => sum + warehouse.inventoryCases, 0)
+  const totalInventoryValue = warehouses.reduce((sum, warehouse) => sum + warehouse.totalStockValue, 0)
   const selectedTerritoryRecord = territories.find((territory) => territory.id === form.territoryId)
   const managerOptions = [...(selectedTerritoryRecord?.managers ?? [])].sort((left, right) => {
     const leftAssigned = left.warehouseId ? 1 : 0
@@ -556,10 +557,11 @@ export default function WarehousesPage() {
       <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
         <article className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Warehouse Summary</p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <div className="mt-5 grid gap-4 sm:grid-cols-4">
             <MetricCard label="Warehouses" value={warehouses.length} />
             <MetricCard label="Territories" value={territories.length} />
             <MetricCard label="Cases on hand" value={totalInventoryCases} />
+            <MetricCard label="Combined stock value" value={formatCurrency(totalInventoryValue)} />
           </div>
         </article>
 
@@ -848,6 +850,7 @@ export default function WarehousesPage() {
                     <div className="grid gap-2 text-sm text-[#6f5648] sm:grid-cols-2">
                       <p><span className="font-semibold text-[#5c4030]">Manager:</span> {warehouse.managerName}</p>
                       <p><span className="font-semibold text-[#5c4030]">Cases:</span> {warehouse.inventoryCases}</p>
+                      <p><span className="font-semibold text-[#5c4030]">Stock value:</span> {formatCurrency(warehouse.totalStockValue)}</p>
                     </div>
                   </button>
                 )

@@ -18,6 +18,8 @@ export interface TmInventoryItem {
   sku: string | null
   packSize: string | null
   imageUrl: string | null
+  casePrice: number
+  stockValue: number
   quantityOnHand: number
   reorderLevel: number
   maxCapacityCases: number
@@ -68,6 +70,12 @@ export interface TmWarehouse {
   territoryId: string
   territory: string | null
   inventory: TmInventoryItem[]
+  inventorySummary: {
+    trackedProducts: number
+    totalCasesOnHand: number
+    totalStockValue: number
+    lowStockProducts: number
+  }
   vehicles: TmWarehouseVehicle[]
   availableVehicles: TmWarehouseVehicle[]
   catalog: TmWarehouseProductOption[]
@@ -81,7 +89,12 @@ export interface TmOrder {
   userId: string
   status: OrderStatus
   totalAmount: number
+  paymentMethod: string
   currencyCode: string
+  appliedPromotionCode: string | null
+  subtotalBeforeDiscount: number | null
+  promotionDiscountTotal: number | null
+  totalAfterDiscount: number | null
   placedAt: string
   approvedAt: string | null
   customerNote: string | null
@@ -151,6 +164,12 @@ export interface TmAssignment {
   deliveryDate: string
   status: string
   notes: string | null
+  expectedCashAmount: number | null
+  cashReturnedAmount: number | null
+  cashVarianceAmount: number | null
+  cashVarianceType: string | null
+  cashVarianceReason: string | null
+  settlementCompletedAt: string | null
   orders: Array<{
     daoId: string
     orderId: string | null
@@ -158,6 +177,12 @@ export interface TmAssignment {
     orderCode: string | null
     shopName: string | null
     totalAmount: number | null
+    paymentMethod: string
+    currencyCode: string
+    appliedPromotionCode: string | null
+    subtotalBeforeDiscount: number | null
+    promotionDiscountTotal: number | null
+    totalAfterDiscount: number | null
     status: string | null
   }>
   createdAt: string
@@ -170,6 +195,7 @@ export interface TmReturn {
   distributorName: string | null
   tmVerified: boolean
   verificationNote: string | null
+  estimatedValue: number | null
   items: Array<{
     id: string
     productId: string | null

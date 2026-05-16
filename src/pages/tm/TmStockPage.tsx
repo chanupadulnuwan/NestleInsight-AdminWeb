@@ -14,6 +14,7 @@ import {
 import { getApiErrorMessage } from '../../api/client'
 import { TerritoryManagerPortalShell } from '../../components/TerritoryManagerPortalShell'
 import { useTmGuard } from '../../hooks/useTmGuard'
+import { formatCurrency } from '../productsPage.helpers'
 
 const surfaceClass =
   'rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]'
@@ -130,7 +131,26 @@ export default function TmStockPage() {
       </div>
 
       {activeTab === 'stock' ? (
-        <div className={surfaceClass}>
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-[1.2rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+              <p className="text-sm font-semibold text-[#8a6c58]">Tracked products</p>
+              <p className="mt-2 text-[1.4rem] font-bold text-[#4d3020]">{inventory.length}</p>
+            </div>
+            <div className="rounded-[1.2rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+              <p className="text-sm font-semibold text-[#8a6c58]">Cases on hand</p>
+              <p className="mt-2 text-[1.4rem] font-bold text-[#4d3020]">
+                {inventory.reduce((sum, item) => sum + item.quantityOnHand, 0)}
+              </p>
+            </div>
+            <div className="rounded-[1.2rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+              <p className="text-sm font-semibold text-[#8a6c58]">Monetary stock value</p>
+              <p className="mt-2 text-[1.4rem] font-bold text-[#4d3020]">
+                {formatCurrency(inventory.reduce((sum, item) => sum + item.stockValue, 0))}
+              </p>
+            </div>
+          </div>
+          <div className={surfaceClass}>
           {stockLoading ? (
             <p className="px-5 py-10 text-center text-sm text-[#7f6657]">Loading...</p>
           ) : null}
@@ -146,6 +166,7 @@ export default function TmStockPage() {
                     <th className="px-5 py-3 text-right">On Hand</th>
                     <th className="px-5 py-3 text-right">Refill At</th>
                     <th className="px-5 py-3 text-right">Capacity</th>
+                    <th className="px-5 py-3 text-right">Value</th>
                     <th className="px-5 py-3 text-left">Fill %</th>
                     <th className="px-5 py-3 text-left">Status</th>
                   </tr>
@@ -178,6 +199,9 @@ export default function TmStockPage() {
                         </td>
                         <td className="px-5 py-3.5 text-right text-[#7f6657]">
                           {item.maxCapacityCases}
+                        </td>
+                        <td className="px-5 py-3.5 text-right font-semibold text-[#4d3020]">
+                          {formatCurrency(item.stockValue)}
                         </td>
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2">
@@ -213,7 +237,7 @@ export default function TmStockPage() {
                   })}
                   {inventory.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-5 py-10 text-center text-[#7f6657]">
+                      <td colSpan={7} className="px-5 py-10 text-center text-[#7f6657]">
                         No inventory data.
                       </td>
                     </tr>
@@ -222,6 +246,7 @@ export default function TmStockPage() {
               </table>
             </div>
           ) : null}
+        </div>
         </div>
       ) : null}
 
@@ -269,6 +294,34 @@ export default function TmStockPage() {
                   >
                     {assignment.status}
                   </span>
+                  {assignment.expectedCashAmount !== null ? (
+                    <div className="mt-3 grid gap-2 rounded-[1rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-3 text-xs text-[#6f5648] sm:grid-cols-3">
+                      <p>
+                        <span className="font-semibold text-[#5c4030]">Expected:</span>{' '}
+                        {formatCurrency(assignment.expectedCashAmount)}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-[#5c4030]">Returned:</span>{' '}
+                        {formatCurrency(assignment.cashReturnedAmount ?? 0)}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-[#5c4030]">Variance:</span>{' '}
+                        {formatCurrency(assignment.cashVarianceAmount ?? 0)}
+                      </p>
+                      {assignment.cashVarianceType ? (
+                        <p className="sm:col-span-3">
+                          <span className="font-semibold text-[#5c4030]">Mismatch type:</span>{' '}
+                          {assignment.cashVarianceType}
+                        </p>
+                      ) : null}
+                      {assignment.cashVarianceReason ? (
+                        <p className="sm:col-span-3">
+                          <span className="font-semibold text-[#5c4030]">Mismatch reason:</span>{' '}
+                          {assignment.cashVarianceReason}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
 
                 {assignment.status === 'ACTIVE' ? (
@@ -292,7 +345,7 @@ export default function TmStockPage() {
                       >
                         {generatingPinId === assignment.id
                           ? 'Generating...'
-                          : 'Generate Return PIN'}
+                          : 'Generate Final Return PIN'}
                       </button>
                     )}
                   </div>

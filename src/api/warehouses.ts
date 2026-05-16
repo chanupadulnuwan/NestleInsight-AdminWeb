@@ -22,6 +22,7 @@ export interface WarehouseSummaryRecord {
   inventoryItemCount: number
   inventoryCases: number
   inventoryUnits: number
+  totalStockValue: number
   createdAt: string
   updatedAt: string
 }

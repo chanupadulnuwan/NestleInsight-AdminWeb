@@ -4,6 +4,7 @@ import { assignVehicleToWarehouse, fetchMyWarehouse, type TmWarehouse } from '..
 import { getApiErrorMessage } from '../../api/client'
 import { TerritoryManagerPortalShell } from '../../components/TerritoryManagerPortalShell'
 import { useTmGuard } from '../../hooks/useTmGuard'
+import { formatCurrency } from '../productsPage.helpers'
 import {
   AddInventoryModal,
   AddVehicleModal,
@@ -101,10 +102,11 @@ export default function TmWarehousePage() {
 
       {warehouse ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
             {[
               ['Tracked products', warehouse.inventory.length],
               ['Needs refill', warehouse.inventory.filter((item) => item.status === 'LOW_STOCK').length],
+              ['Stock value', formatCurrency(warehouse.inventorySummary.totalStockValue)],
               ['Assigned vehicles', warehouse.vehicles.length],
               ['Employees', employees.length],
               ['Shops', shops.length],

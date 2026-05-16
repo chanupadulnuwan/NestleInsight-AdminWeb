@@ -39,6 +39,12 @@ function statusLabel(status: string) {
   return status.charAt(0) + status.slice(1).toLowerCase()
 }
 
+function paymentMethodLabel(paymentMethod: string) {
+  return paymentMethod === 'CASH_ON_DELIVERY'
+    ? 'Cash on delivery'
+    : 'Standard checkout'
+}
+
 function DelayModal({
   order,
   onClose,
@@ -454,7 +460,7 @@ export default function TmOrdersPage() {
                     <th className="px-4 py-3 text-left" />
                     <th className="px-4 py-3 text-left">Order</th>
                     <th className="px-4 py-3 text-left">Shop</th>
-                    <th className="px-4 py-3 text-right">Total</th>
+                    <th className="px-4 py-3 text-right">Order Value</th>
                     <th className="px-4 py-3 text-left">Timeline</th>
                     <th className="px-4 py-3 text-left">Status</th>
                     <th className="px-4 py-3 text-left">Delay Reason</th>
@@ -482,18 +488,46 @@ export default function TmOrdersPage() {
                         ) : null}
                       </td>
                       <td className="px-4 py-3.5">
-                        <span className="font-mono text-xs font-semibold text-[#4d3020]">
-                          {order.orderCode}
-                        </span>
-                        {order.isOverdue ? (
-                          <span className="ml-2 rounded-full bg-[#fef3c7] px-1.5 py-0.5 text-xs font-bold text-[#92400e]">
-                            Overdue
-                          </span>
-                        ) : null}
+                        <div className="flex flex-col gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-xs font-semibold text-[#4d3020]">
+                              {order.orderCode}
+                            </span>
+                            {order.isOverdue ? (
+                              <span className="rounded-full bg-[#fef3c7] px-1.5 py-0.5 text-xs font-bold text-[#92400e]">
+                                Overdue
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <span className="rounded-full border border-[#ebdfd5] bg-[#fff9f5] px-2 py-0.5 text-[11px] font-semibold text-[#7f6657]">
+                              {paymentMethodLabel(order.paymentMethod)}
+                            </span>
+                            {order.appliedPromotionCode ? (
+                              <span className="rounded-full border border-[#e0c0ba] bg-[#fff4f1] px-2 py-0.5 text-[11px] font-semibold text-[#9b4b46]">
+                                Promo {order.appliedPromotionCode}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3.5 text-[#7f6657]">{order.shopName}</td>
-                      <td className="px-4 py-3.5 text-right font-semibold text-[#4d3020]">
-                        {formatCurrency(order.totalAmount)}
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="font-semibold text-[#4d3020]">
+                            {formatCurrency(order.totalAfterDiscount ?? order.totalAmount)}
+                          </span>
+                          {(order.promotionDiscountTotal ?? 0) > 0 ? (
+                            <>
+                              <span className="text-xs text-[#7f6657]">
+                                Before: {formatCurrency(order.subtotalBeforeDiscount ?? order.totalAmount)}
+                              </span>
+                              <span className="text-xs font-semibold text-[#4d6c45]">
+                                Discount: -{formatCurrency(order.promotionDiscountTotal ?? 0)}
+                              </span>
+                            </>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="px-4 py-3.5 text-xs text-[#7f6657]">
                         <p>Placed: {new Date(order.placedAt).toLocaleString()}</p>

@@ -1,6 +1,7 @@
 import { type TmInventoryItem, type TmWarehouseUser, type TmWarehouseVehicle } from '../../api/tm'
 import { resolveMediaUrl } from '../../api/client'
 import { Pill } from './TmWarehouseOverlays'
+import { formatCurrency } from '../productsPage.helpers'
 
 export const surfaceClass =
   'rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]'
@@ -44,6 +45,7 @@ export function InventorySection({ inventory }: { inventory: TmInventoryItem[] }
               <th className="px-5 py-3 text-right">On hand</th>
               <th className="px-5 py-3 text-right">Refill at</th>
               <th className="px-5 py-3 text-right">Capacity</th>
+              <th className="px-5 py-3 text-right">Value</th>
               <th className="px-5 py-3 text-left">Status</th>
             </tr>
           </thead>
@@ -63,10 +65,11 @@ export function InventorySection({ inventory }: { inventory: TmInventoryItem[] }
                 <td className="px-5 py-3.5 text-right font-bold text-[#4d3020]">{item.quantityOnHand}</td>
                 <td className="px-5 py-3.5 text-right text-[#7f6657]">{item.reorderLevel}</td>
                 <td className="px-5 py-3.5 text-right text-[#7f6657]">{item.maxCapacityCases}</td>
+                <td className="px-5 py-3.5 text-right font-semibold text-[#4d3020]">{formatCurrency(item.stockValue)}</td>
                 <td className="px-5 py-3.5"><InventoryStatusBadge status={item.status} /></td>
               </tr>
             ))}
-            {inventory.length === 0 ? <tr><td colSpan={6} className="px-5 py-10 text-center text-[#7f6657]">No inventory items yet.</td></tr> : null}
+            {inventory.length === 0 ? <tr><td colSpan={7} className="px-5 py-10 text-center text-[#7f6657]">No inventory items yet.</td></tr> : null}
           </tbody>
         </table>
       </div>

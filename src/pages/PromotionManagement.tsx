@@ -23,9 +23,22 @@ function toDateInputValue(iso: string | null | undefined) {
   return iso.slice(0, 10)
 }
 
+function parseDateOnly(value: string | null | undefined) {
+  const normalized = toDateInputValue(value)
+  if (!normalized) return null
+
+  const [year, month, day] = normalized.split('-').map(Number)
+  if (!year || !month || !day) return null
+
+  return new Date(year, month - 1, day)
+}
+
 function formatDate(iso: string | null | undefined) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-GB', {
+  if (!iso) return '-'
+  const date = parseDateOnly(iso)
+  if (!date) return '-'
+
+  return date.toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -37,6 +50,22 @@ function formatPromoType(t: string) {
     .split('_')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ')
+}
+
+function resolvePromotionStatus(promotion: PromotionRecord): PromotionStatus {
+  const rawStatus = promotion.status.trim().toLowerCase()
+
+  if (rawStatus === 'disabled') return 'disabled'
+  if (rawStatus === 'draft') return 'draft'
+
+  const today = new Date()
+  const todayAtMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const startDate = parseDateOnly(promotion.startDate)
+  const endDate = parseDateOnly(promotion.endDate)
+
+  if (startDate && todayAtMidnight < startDate) return 'scheduled'
+  if (endDate && todayAtMidnight > endDate) return 'expired'
+  return 'active'
 }
 
 // ─── status badge ────────────────────────────────────────────────────────────
@@ -300,7 +329,7 @@ export default function PromotionManagement() {
       description: promotion.description ?? '',
       startDate: toDateInputValue(promotion.startDate),
       endDate: toDateInputValue(promotion.endDate),
-      status: promotion.status as PromotionStatus,
+      status: resolvePromotionStatus(promotion),
       promotionType: promotion.promotionType as PromotionType,
       discountType: promotion.discountType as DiscountType,
       discountValue: Number(promotion.discountValue),
@@ -330,6 +359,12 @@ export default function PromotionManagement() {
     e.preventDefault()
     setIsSaving(true)
     setModalError(null)
+
+    if (form.startDate && form.endDate && form.endDate < form.startDate) {
+      setModalError('End date must be the same day or later than the start date.')
+      setIsSaving(false)
+      return
+    }
 
     const payload: PromotionPayload = {
       ...form,
@@ -584,7 +619,10 @@ export default function PromotionManagement() {
                     {promotions.map((promo, idx) => {
                       const isWorking = statusActionId === promo.id
                       const isDeleting = deleteActionId === promo.id
-                      const isActive = promo.status === 'active'
+                      const effectiveStatus = resolvePromotionStatus(promo)
+                      const shouldDeactivate =
+                        effectiveStatus === 'active' || effectiveStatus === 'scheduled'
+                      const canToggle = effectiveStatus !== 'expired'
                       return (
                         <tr
                           key={promo.id}
@@ -610,7 +648,7 @@ export default function PromotionManagement() {
                           <td className="px-4 py-3.5 font-medium text-[#4d3020]">
                             {promo.discountType === 'percentage'
                               ? `${Number(promo.discountValue)}%`
-                              : `₦${Number(promo.discountValue).toLocaleString()}`}
+                              : `LKR ${Number(promo.discountValue).toLocaleString()}`}
                           </td>
                           <td className="px-4 py-3.5 text-[#6e5647]">
                             {formatDate(promo.startDate)}
@@ -619,7 +657,7 @@ export default function PromotionManagement() {
                             {formatDate(promo.endDate)}
                           </td>
                           <td className="px-4 py-3.5">
-                            <StatusBadge status={promo.status} />
+                            <StatusBadge status={effectiveStatus} />
                           </td>
                           <td className="px-4 py-3.5">
                             <div className="flex flex-wrap items-center gap-2">
@@ -632,7 +670,7 @@ export default function PromotionManagement() {
                               >
                                 Edit
                               </button>
-                              {!['expired', 'disabled'].includes(promo.status) && (
+                              {canToggle && (
                                 <button
                                   id={`pm-toggle-${promo.id}`}
                                   type="button"
@@ -640,16 +678,16 @@ export default function PromotionManagement() {
                                   onClick={() =>
                                     void handleStatusChange(
                                       promo.id,
-                                      isActive ? 'disabled' : 'active',
+                                      shouldDeactivate ? 'disabled' : 'active',
                                     )
                                   }
                                   className={`rounded-[0.65rem] px-2.5 py-1.5 text-xs font-semibold transition duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${
-                                    isActive
+                                    shouldDeactivate
                                       ? 'bg-[#fef2f2] text-[#b91c1c] hover:bg-[#fee2e2]'
                                       : 'bg-[#e6f9ef] text-[#1a6b3c] hover:bg-[#d1f5e4]'
                                   }`}
                                 >
-                                  {isWorking ? '…' : isActive ? 'Deactivate' : 'Activate'}
+                                  {isWorking ? '…' : shouldDeactivate ? 'Deactivate' : 'Activate'}
                                 </button>
                               )}
                               <button
