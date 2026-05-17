@@ -76,6 +76,7 @@ export interface WarehouseDetailRecord extends WarehouseSummaryRecord {
       totalCases: number
     }
     records: WarehouseOrderRecord[]
+    productOrderTotals: Record<string, number>
   }
 }
 

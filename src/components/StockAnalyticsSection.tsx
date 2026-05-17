@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import {
   LineChart,
   Line,
@@ -14,18 +14,25 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { fetchTmAnalytics, type WarehouseAnalytics } from '../api/tm'
-import { fetchWarehouseAnalytics, fetchWarehouses, type WarehouseSummaryRecord } from '../api/warehouses'
+import { fetchMyWarehouse, fetchTmOrders, type TmInventoryItem, type TmOrder } from '../api/tm'
+import {
+  fetchWarehouses,
+  fetchWarehouseDetails,
+  type WarehouseSummaryRecord,
+  type WarehouseInventoryRecord,
+  type WarehouseOrderRecord,
+} from '../api/warehouses'
 import { getApiErrorMessage } from '../api/client'
 import { formatCurrency } from '../pages/productsPage.helpers'
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const surfaceClass =
   'rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]'
 
-const CHART_COLORS = [
-  '#8b5a3a', '#d97706', '#6366f1', '#10b981', '#f43f5e',
-  '#0ea5e9', '#a855f7', '#84cc16', '#f97316', '#14b8a6',
-]
+const STOCK_COLOR = '#8b5a3a'
+const ORDER_COLOR = '#d97706'
+const PIE_COLORS = [STOCK_COLOR, ORDER_COLOR]
 
 const DAY_OPTIONS = [
   { label: 'Last 7 days', value: 7 },
@@ -33,86 +40,245 @@ const DAY_OPTIONS = [
   { label: 'Last 90 days', value: 90 },
 ]
 
-function shortLabel(name: string, maxLen = 16) {
-  return name.length > maxLen ? name.slice(0, maxLen - 1) + '…' : name
+function shortLabel(name: string | undefined | null, max = 16) {
+  if (!name) return '—'
+  return name.length > max ? name.slice(0, max - 1) + '…' : name
 }
 
-function mergeAnalytics(list: WarehouseAnalytics[]): WarehouseAnalytics {
-  if (list.length === 0) return { products: [], orderTrend: [], productSummary: [], inventoryValue: [] }
+// ─── Data types ───────────────────────────────────────────────────────────────
 
-  const productMap = new Map<string, { id: string; name: string }>()
-  for (const a of list) for (const p of a.products) productMap.set(p.id, p)
-
-  const trendMap = new Map<string, { orderCases: number; orderCount: number; inventorySnapshot: number | null }>()
-  for (const a of list) {
-    for (const point of a.orderTrend) {
-      const existing = trendMap.get(point.date) ?? { orderCases: 0, orderCount: 0, inventorySnapshot: null }
-      existing.orderCases += point.orderCases
-      existing.orderCount += point.orderCount
-      trendMap.set(point.date, existing)
-    }
-  }
-  const orderTrend = Array.from(trendMap.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, data]) => ({ date, ...data }))
-
-  const summaryMap = new Map<string, { productId: string; productName: string; casesOnHand: number; totalOrderedCases: number }>()
-  for (const a of list) {
-    for (const s of a.productSummary) {
-      const ex = summaryMap.get(s.productId) ?? { productId: s.productId, productName: s.productName, casesOnHand: 0, totalOrderedCases: 0 }
-      ex.casesOnHand += s.casesOnHand
-      ex.totalOrderedCases += s.totalOrderedCases
-      summaryMap.set(s.productId, ex)
-    }
-  }
-
-  const valueMap = new Map<string, { productId: string; productName: string; stockValue: number }>()
-  for (const a of list) {
-    for (const v of a.inventoryValue) {
-      const ex = valueMap.get(v.productId) ?? { productId: v.productId, productName: v.productName, stockValue: 0 }
-      ex.stockValue += v.stockValue
-      valueMap.set(v.productId, ex)
-    }
-  }
-
-  return {
-    products: Array.from(productMap.values()),
-    orderTrend,
-    productSummary: Array.from(summaryMap.values()),
-    inventoryValue: Array.from(valueMap.values()),
-  }
+interface TrendPoint {
+  date: string
+  orderCases: number
+  inventorySnapshot: number | null
 }
+
+interface ProductBar {
+  productId: string
+  productName: string
+  casesOnHand: number
+  orderedCases: number
+}
+
+interface PieSlice {
+  name: string
+  value: number
+}
+
+interface ProductOption {
+  id: string
+  name: string
+}
+
+interface ChartBundle {
+  trend: TrendPoint[]
+  bars: ProductBar[]
+  pie: PieSlice[]          // always 2 elements for admin, empty for TM
+  products: ProductOption[]
+}
+
+// ─── Data derivation helpers ──────────────────────────────────────────────────
+
+function buildDateRange(days: number): string[] {
+  const dates: string[] = []
+  const today = new Date()
+  for (let i = days; i >= 0; i--) {
+    const d = new Date(today)
+    d.setDate(d.getDate() - i)
+    dates.push(d.toISOString().split('T')[0])
+  }
+  return dates
+}
+
+function tmChartBundle(
+  inventory: TmInventoryItem[],
+  orders: TmOrder[],
+  selectedProductId: string,
+  days: number,
+): ChartBundle {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - days)
+  const recent = orders.filter((o) => new Date(o.placedAt) >= cutoff)
+
+  // Trend — cases ordered per day, filtered by product
+  const trendMap = new Map<string, number>()
+  for (const order of recent) {
+    const dateStr = order.placedAt.split('T')[0]
+    const items = selectedProductId
+      ? order.items.filter((i) => i.productId === selectedProductId)
+      : order.items
+    const cases = items.reduce((sum, i) => sum + i.quantity, 0)
+    trendMap.set(dateStr, (trendMap.get(dateStr) ?? 0) + cases)
+  }
+
+  const selectedInv = selectedProductId
+    ? inventory.find((i) => i.productId === selectedProductId)
+    : null
+  const snapshot = selectedInv?.quantityOnHand ?? null
+
+  const trend: TrendPoint[] = buildDateRange(days).map((date) => ({
+    date,
+    orderCases: trendMap.get(date) ?? 0,
+    inventorySnapshot: snapshot,
+  }))
+
+  // Bar chart — per product, inventory + ordered cases
+  const productOrderMap = new Map<string, number>()
+  for (const order of recent) {
+    for (const item of order.items) {
+      if (item.productId) {
+        productOrderMap.set(
+          item.productId,
+          (productOrderMap.get(item.productId) ?? 0) + item.quantity,
+        )
+      }
+    }
+  }
+
+  const bars: ProductBar[] = inventory.map((item) => ({
+    productId: item.productId,
+    productName: item.productName ?? '—',
+    casesOnHand: item.quantityOnHand,
+    orderedCases: productOrderMap.get(item.productId) ?? 0,
+  }))
+
+  const products: ProductOption[] = inventory.map((i) => ({
+    id: i.productId,
+    name: i.productName ?? '—',
+  }))
+
+  return { trend, bars, pie: [], products }
+}
+
+function adminChartBundle(
+  inventories: WarehouseInventoryRecord[],
+  orderRecords: WarehouseOrderRecord[],
+  productOrderTotals: Record<string, number>,
+  selectedProductId: string,
+  days: number,
+): ChartBundle {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - days)
+  const recent = orderRecords.filter((o) => new Date(o.placedAt) >= cutoff)
+
+  // Trend — total cases per day (warehouse-level, no per-product breakdown in records)
+  const trendMap = new Map<string, number>()
+  for (const order of recent) {
+    const dateStr = new Date(order.placedAt).toISOString().split('T')[0]
+    trendMap.set(dateStr, (trendMap.get(dateStr) ?? 0) + order.totalCases)
+  }
+
+  const selectedInv = selectedProductId
+    ? inventories.find((i) => i.productId === selectedProductId)
+    : null
+  const snapshot = selectedInv?.casesOnHand ?? null
+
+  const trend: TrendPoint[] = buildDateRange(days).map((date) => ({
+    date,
+    orderCases: trendMap.get(date) ?? 0,
+    inventorySnapshot: snapshot,
+  }))
+
+  // Bar chart — per product inventory + ordered cases from productOrderTotals
+  const bars: ProductBar[] = inventories.map((item) => ({
+    productId: item.productId,
+    productName: item.productName,
+    casesOnHand: item.casesOnHand,
+    orderedCases: productOrderTotals[item.productId] ?? 0,
+  }))
+
+  // Pie chart — 2 segments: stock value vs order revenue
+  const totalStockValue = inventories.reduce((sum, i) => sum + i.stockValue, 0)
+  const totalRevenue = recent.reduce((sum, o) => sum + o.totalAmount, 0)
+
+  const pie: PieSlice[] = [
+    { name: 'Current Stock Value', value: Number(totalStockValue.toFixed(2)) },
+    { name: 'Order Revenue', value: Number(totalRevenue.toFixed(2)) },
+  ]
+
+  const products: ProductOption[] = inventories.map((i) => ({
+    id: i.productId,
+    name: i.productName,
+  }))
+
+  return { trend, bars, pie, products }
+}
+
+function mergeAdminBundles(bundles: ChartBundle[], days: number): ChartBundle {
+  // Merge trend by date
+  const trendMap = new Map<string, number>()
+  for (const b of bundles) {
+    for (const point of b.trend) {
+      trendMap.set(point.date, (trendMap.get(point.date) ?? 0) + point.orderCases)
+    }
+  }
+  const trend: TrendPoint[] = buildDateRange(days).map((date) => ({
+    date,
+    orderCases: trendMap.get(date) ?? 0,
+    inventorySnapshot: null, // no single product context in ALL view
+  }))
+
+  // Merge bars by productId
+  const barMap = new Map<string, ProductBar>()
+  for (const b of bundles) {
+    for (const bar of b.bars) {
+      const ex = barMap.get(bar.productId)
+      if (ex) {
+        ex.casesOnHand += bar.casesOnHand
+        ex.orderedCases += bar.orderedCases
+      } else {
+        barMap.set(bar.productId, { ...bar })
+      }
+    }
+  }
+  const bars = Array.from(barMap.values())
+
+  // Merge pie slices (both bundles have same 2-slot structure)
+  const stockValue = bundles.reduce((sum, b) => sum + (b.pie[0]?.value ?? 0), 0)
+  const revenue = bundles.reduce((sum, b) => sum + (b.pie[1]?.value ?? 0), 0)
+  const pie: PieSlice[] = [
+    { name: 'Current Stock Value', value: Number(stockValue.toFixed(2)) },
+    { name: 'Order Revenue', value: Number(revenue.toFixed(2)) },
+  ]
+
+  // Deduplicate products
+  const productMap = new Map<string, ProductOption>()
+  for (const b of bundles) for (const p of b.products) productMap.set(p.id, p)
+  const products = Array.from(productMap.values())
+
+  return { trend, bars, pie, products }
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
   isAdmin: boolean
 }
 
 export default function StockAnalyticsSection({ isAdmin }: Props) {
-  const [analytics, setAnalytics] = useState<WarehouseAnalytics | null>(null)
+  const [bundle, setBundle] = useState<ChartBundle | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [selectedProduct, setSelectedProduct] = useState<string>('')
+  const [selectedProduct, setSelectedProduct] = useState('')
   const [selectedDays, setSelectedDays] = useState(30)
 
+  // Admin warehouse state
   const [warehouses, setWarehouses] = useState<WarehouseSummaryRecord[]>([])
-  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('ALL')
-  const [warehousesReady, setWarehousesReady] = useState(!isAdmin)
+  const [selectedWarehouse, setSelectedWarehouse] = useState('ALL')
+  const [warehousesLoaded, setWarehousesLoaded] = useState(!isAdmin)
 
   // Load warehouse list (admin only)
   useEffect(() => {
     if (!isAdmin) return
     fetchWarehouses()
-      .then((res) => {
-        setWarehouses(res.warehouses)
-      })
+      .then((res) => setWarehouses(res.warehouses))
       .catch(() => {})
-      .finally(() => setWarehousesReady(true))
+      .finally(() => setWarehousesLoaded(true))
   }, [isAdmin])
 
-  // Load analytics whenever filters change
-  useEffect(() => {
-    if (!warehousesReady) return
+  const loadData = useCallback(async () => {
+    if (!warehousesLoaded) return
     if (isAdmin && warehouses.length === 0) {
       setLoading(false)
       return
@@ -121,27 +287,59 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
     setLoading(true)
     setError(null)
 
-    const productParam = selectedProduct || undefined
+    try {
+      if (!isAdmin) {
+        // ── TM mode ──────────────────────────────────────────────────────────
+        const [warehouseRes, ordersRes] = await Promise.all([
+          fetchMyWarehouse(),
+          fetchTmOrders(),
+        ])
+        setBundle(
+          tmChartBundle(
+            warehouseRes.warehouse.inventory,
+            ordersRes.orders,
+            selectedProduct,
+            selectedDays,
+          ),
+        )
+      } else {
+        // ── Admin mode ────────────────────────────────────────────────────────
+        const targets =
+          selectedWarehouse === 'ALL' ? warehouses : warehouses.filter((w) => w.id === selectedWarehouse)
 
-    const fetches: Promise<{ analytics: WarehouseAnalytics }>[] = isAdmin
-      ? selectedWarehouse === 'ALL'
-        ? warehouses.map((w) => fetchWarehouseAnalytics(w.id, productParam, selectedDays))
-        : [fetchWarehouseAnalytics(selectedWarehouse, productParam, selectedDays)]
-      : [fetchTmAnalytics(productParam, selectedDays)]
+        const details = await Promise.all(
+          targets.map((w) => fetchWarehouseDetails(w.id, 'ANNUALLY')),
+        )
 
-    Promise.all(fetches)
-      .then((results) => {
-        const merged = results.length === 1 ? results[0].analytics : mergeAnalytics(results.map((r) => r.analytics))
-        setAnalytics(merged)
-      })
-      .catch((err) => setError(getApiErrorMessage(err)))
-      .finally(() => setLoading(false))
-  }, [isAdmin, warehouses, selectedWarehouse, selectedProduct, selectedDays, warehousesReady])
+        const bundles = details.map((res) =>
+          adminChartBundle(
+            res.warehouse.inventory,
+            res.warehouse.orders.records,
+            res.warehouse.orders.productOrderTotals ?? {},
+            selectedProduct,
+            selectedDays,
+          ),
+        )
+
+        setBundle(bundles.length === 1 ? bundles[0] : mergeAdminBundles(bundles, selectedDays))
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }, [isAdmin, warehouses, selectedWarehouse, selectedProduct, selectedDays, warehousesLoaded])
+
+  useEffect(() => {
+    void loadData()
+  }, [loadData])
+
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   const warehouseLabel =
-    isAdmin && selectedWarehouse !== 'ALL'
-      ? warehouses.find((w) => w.id === selectedWarehouse)?.name ?? ''
-      : 'All Warehouses'
+    selectedWarehouse === 'ALL'
+      ? 'All Warehouses'
+      : (warehouses.find((w) => w.id === selectedWarehouse)?.name ?? '')
 
   return (
     <div className="space-y-6">
@@ -170,7 +368,7 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
           </div>
         )}
 
-        {analytics && analytics.products.length > 0 && (
+        {bundle && bundle.products.length > 0 && (
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold uppercase tracking-wide text-[#8a6c58]">
               Product
@@ -181,7 +379,7 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
               className="rounded-[0.85rem] border border-[#d7baa3] bg-white px-3 py-2 text-sm font-medium text-[#4d3020] focus:outline-none focus:ring-2 focus:ring-[#8b5a3a]/30"
             >
               <option value="">All Products</option>
-              {analytics.products.map((p) => (
+              {bundle.products.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
@@ -208,15 +406,19 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
         </div>
       </div>
 
-      {loading && <p className="py-10 text-center text-sm text-[#7f6657]">Loading analytics...</p>}
-      {error && <p className="py-10 text-center text-sm text-red-600">{error}</p>}
+      {loading && (
+        <p className="py-10 text-center text-sm text-[#7f6657]">Loading analytics…</p>
+      )}
+      {!loading && error && (
+        <p className="py-10 text-center text-sm text-red-600">{error}</p>
+      )}
       {!loading && !error && isAdmin && warehouses.length === 0 && (
         <p className="py-10 text-center text-sm text-[#7f6657]">No warehouses found.</p>
       )}
 
-      {!loading && !error && analytics && (
+      {!loading && !error && bundle && (
         <>
-          {/* Line chart — Inventory Stock vs Order Cases over time */}
+          {/* ── Chart 1: Line chart ───────────────────────────────────────── */}
           <div className={`${surfaceClass} p-6`}>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#a37d63]">
               Trend over time
@@ -224,16 +426,19 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
             <h3 className="mb-4 text-base font-bold text-[#4d3020]">
               Inventory Stock &amp; Order Cases
               {selectedProduct
-                ? ` · ${analytics.products.find((p) => p.id === selectedProduct)?.name ?? ''}`
+                ? ` · ${bundle.products.find((p) => p.id === selectedProduct)?.name ?? ''}`
                 : ' · All Products'}
             </h3>
             <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={analytics.orderTrend} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+              <LineChart
+                data={bundle.trend}
+                margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1e5db" />
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 11, fill: '#8a6c58' }}
-                  tickFormatter={(v) => {
+                  tickFormatter={(v: string) => {
                     const d = new Date(v)
                     return `${d.getMonth() + 1}/${d.getDate()}`
                   }}
@@ -241,8 +446,12 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
                 />
                 <YAxis tick={{ fontSize: 11, fill: '#8a6c58' }} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{ borderRadius: '0.85rem', borderColor: '#ebdfd5', fontSize: 12 }}
-                  labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                  contentStyle={{
+                    borderRadius: '0.85rem',
+                    borderColor: '#ebdfd5',
+                    fontSize: 12,
+                  }}
+                  labelFormatter={(label: string) => new Date(label).toLocaleDateString()}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 {selectedProduct && (
@@ -250,7 +459,7 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
                     type="monotone"
                     dataKey="inventorySnapshot"
                     name="Inventory Stock (cases)"
-                    stroke="#8b5a3a"
+                    stroke={STOCK_COLOR}
                     strokeWidth={2}
                     dot={false}
                     strokeDasharray="5 3"
@@ -261,7 +470,7 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
                   type="monotone"
                   dataKey="orderCases"
                   name="Order Cases"
-                  stroke="#d97706"
+                  stroke={ORDER_COLOR}
                   strokeWidth={2}
                   dot={false}
                   activeDot={{ r: 5 }}
@@ -270,45 +479,65 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
             </ResponsiveContainer>
           </div>
 
-          {/* Grouped bar chart — Inventory vs Orders per product */}
+          {/* ── Chart 2: Grouped bar chart ────────────────────────────────── */}
           <div className={`${surfaceClass} p-6`}>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#a37d63]">
               Product breakdown
             </p>
             <h3 className="mb-4 text-base font-bold text-[#4d3020]">
-              Inventory Cases vs Total Ordered Cases
+              Inventory Cases vs Total Ordered Cases per Product
             </h3>
-            {analytics.productSummary.length === 0 ? (
-              <p className="py-8 text-center text-sm text-[#7f6657]">No inventory data available.</p>
+            {bundle.bars.length === 0 ? (
+              <p className="py-8 text-center text-sm text-[#7f6657]">
+                No inventory data available.
+              </p>
             ) : (
               <div className="overflow-x-auto">
-                <div style={{ minWidth: Math.max(400, analytics.productSummary.length * 60) }}>
+                <div style={{ minWidth: Math.max(420, bundle.bars.length * 64) }}>
                   <ResponsiveContainer width="100%" height={320}>
                     <BarChart
-                      data={analytics.productSummary.map((p) => ({
-                        ...p,
-                        shortName: shortLabel(p.productName),
+                      data={bundle.bars.map((b) => ({
+                        ...b,
+                        label: shortLabel(b.productName),
                       }))}
-                      margin={{ top: 4, right: 16, left: 0, bottom: 56 }}
+                      margin={{ top: 4, right: 16, left: 0, bottom: 60 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1e5db" />
                       <XAxis
-                        dataKey="shortName"
+                        dataKey="label"
                         tick={{ fontSize: 10, fill: '#8a6c58' }}
                         angle={-35}
                         textAnchor="end"
                         interval={0}
                       />
-                      <YAxis tick={{ fontSize: 11, fill: '#8a6c58' }} allowDecimals={false} />
+                      <YAxis
+                        tick={{ fontSize: 11, fill: '#8a6c58' }}
+                        allowDecimals={false}
+                      />
                       <Tooltip
-                        contentStyle={{ borderRadius: '0.85rem', borderColor: '#ebdfd5', fontSize: 12 }}
-                        labelFormatter={(_, payload) =>
-                          payload?.[0]?.payload?.productName ?? ''
-                        }
+                        contentStyle={{
+                          borderRadius: '0.85rem',
+                          borderColor: '#ebdfd5',
+                          fontSize: 12,
+                        }}
+                        labelFormatter={(_: unknown, payload: unknown[]) => {
+                          const p = payload as Array<{ payload?: ProductBar }>
+                          return p?.[0]?.payload?.productName ?? ''
+                        }}
                       />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="casesOnHand" name="Inventory Cases" fill="#8b5a3a" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="totalOrderedCases" name="Total Ordered Cases" fill="#d97706" radius={[4, 4, 0, 0]} />
+                      <Bar
+                        dataKey="casesOnHand"
+                        name="Inventory Cases"
+                        fill={STOCK_COLOR}
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="orderedCases"
+                        name="Ordered Cases"
+                        fill={ORDER_COLOR}
+                        radius={[4, 4, 0, 0]}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -316,61 +545,71 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
             )}
           </div>
 
-          {/* Pie chart — Monetary value (admin only) */}
-          {isAdmin && analytics.inventoryValue.length > 0 && (
+          {/* ── Chart 3: Pie chart (admin only) ──────────────────────────── */}
+          {isAdmin && bundle.pie.some((s) => s.value > 0) && (
             <div className={`${surfaceClass} p-6`}>
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#a37d63]">
                 Monetary value
               </p>
               <h3 className="mb-1 text-base font-bold text-[#4d3020]">
-                Stock Value by Product
+                Stock Value vs Order Revenue
               </h3>
               <p className="mb-4 text-xs text-[#7f6657]">{warehouseLabel}</p>
-              <ResponsiveContainer width="100%" height={320}>
-                <PieChart>
-                  <Pie
-                    data={analytics.inventoryValue}
-                    dataKey="stockValue"
-                    nameKey="productName"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={110}
-                    label={({ name, percent }) =>
-                      `${shortLabel(name, 12)} ${(percent * 100).toFixed(0)}%`
-                    }
-                    labelLine={false}
-                  >
-                    {analytics.inventoryValue.map((_, index) => (
-                      <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ borderRadius: '0.85rem', borderColor: '#ebdfd5', fontSize: 12 }}
-                    formatter={(value) => [formatCurrency(value as number), 'Stock Value']}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 11 }} formatter={(value) => shortLabel(value, 24)} />
-                </PieChart>
-              </ResponsiveContainer>
 
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {[...analytics.inventoryValue]
-                  .sort((a, b) => b.stockValue - a.stockValue)
-                  .slice(0, 6)
-                  .map((item, idx) => (
+              <div className="flex flex-col gap-6 md:flex-row md:items-center">
+                <div className="w-full md:w-1/2">
+                  <ResponsiveContainer width="100%" height={260}>
+                    <PieChart>
+                      <Pie
+                        data={bundle.pie}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        innerRadius={48}
+                        paddingAngle={3}
+                      >
+                        {bundle.pie.map((_, idx) => (
+                          <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: '0.85rem',
+                          borderColor: '#ebdfd5',
+                          fontSize: 12,
+                        }}
+                        formatter={(value: number) => [
+                          formatCurrency(value),
+                          '',
+                        ]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="flex flex-col gap-3 md:w-1/2">
+                  {bundle.pie.map((slice, idx) => (
                     <div
-                      key={item.productId}
-                      className="flex items-center gap-3 rounded-[1rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-3"
+                      key={slice.name}
+                      className="flex items-center gap-4 rounded-[1.2rem] border border-[#eee2d7] bg-[#fff9f5] px-5 py-4"
                     >
                       <div
-                        className="h-3 w-3 shrink-0 rounded-full"
-                        style={{ background: CHART_COLORS[idx % CHART_COLORS.length] }}
+                        className="h-4 w-4 shrink-0 rounded-full"
+                        style={{ background: PIE_COLORS[idx % PIE_COLORS.length] }}
                       />
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold text-[#4d3020]">{item.productName}</p>
-                        <p className="text-xs text-[#7f6657]">{formatCurrency(item.stockValue)}</p>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#8a6c58]">
+                          {slice.name}
+                        </p>
+                        <p className="mt-0.5 text-[1.2rem] font-bold text-[#4d3020]">
+                          {formatCurrency(slice.value)}
+                        </p>
                       </div>
                     </div>
                   ))}
+                </div>
               </div>
             </div>
           )}
