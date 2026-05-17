@@ -13,6 +13,7 @@ import {
 } from '../../api/tm'
 import { getApiErrorMessage } from '../../api/client'
 import { TerritoryManagerPortalShell } from '../../components/TerritoryManagerPortalShell'
+import StockAnalyticsSection from '../../components/StockAnalyticsSection'
 import { useTmGuard } from '../../hooks/useTmGuard'
 import { formatCurrency } from '../productsPage.helpers'
 
@@ -131,7 +132,7 @@ export default function TmStockPage() {
       </div>
 
       {activeTab === 'stock' ? (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-[1.2rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
               <p className="text-sm font-semibold text-[#8a6c58]">Tracked products</p>
@@ -247,6 +248,14 @@ export default function TmStockPage() {
             </div>
           ) : null}
         </div>
+
+          {/* Analytics charts */}
+          <div>
+            <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-[#a37d63]">
+              Stock Analytics
+            </p>
+            <StockAnalyticsSection isAdmin={false} />
+          </div>
         </div>
       ) : null}
 

@@ -6,6 +6,7 @@ import DemandForecastExportSection from '../components/DemandForecastExportSecti
 import DemandForecastEngineSection from '../components/DemandForecastEngineSection'
 import DemandPlannerInsightCenterSection from '../components/DemandPlannerInsightCenterSection'
 import ReportDashboardSection from '../components/ReportDashboardSection'
+import StockAnalyticsSection from '../components/StockAnalyticsSection'
 import { approvePendingUser, fetchPendingUsers, rejectPendingUser } from '../api/users'
 import { useAuth } from '../context/AuthContext'
 
@@ -768,19 +769,8 @@ export default function AdminDashboard() {
     )
   } else if (activeSection === 'stocks') {
     content = (
-      <section className="grid gap-5 xl:grid-cols-2">
-        <article className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Inventory Control</p>
-          <h2 className="mt-3 text-[1.75rem] font-bold tracking-[-0.04em] text-[#4d3020]">Stocks area is ready for real inventory modules</h2>
-          <p className="mt-4 text-sm leading-7 text-[#7f6657]">This section keeps room for warehouse stock tables, low-stock alerts, and dispatch visibility.</p>
-        </article>
-        <article className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Warehouse Signals</p>
-          <div className="mt-5 grid gap-4">
-            <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4"><p className="text-sm font-semibold text-[#8a6c58]">Warehouse health</p><p className="mt-2 text-[1.4rem] font-bold text-[#4d3020]">Stable</p></div>
-            <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4"><p className="text-sm font-semibold text-[#8a6c58]">Replenishment</p><p className="mt-2 text-[1.4rem] font-bold text-[#4d3020]">Queued</p></div>
-          </div>
-        </article>
+      <section className="space-y-2">
+        <StockAnalyticsSection isAdmin={true} />
       </section>
     )
   } else if (activeSection === 'exports') {

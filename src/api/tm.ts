@@ -216,6 +216,37 @@ export interface TmIncident {
   createdAt: string
 }
 
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+export interface WarehouseAnalytics {
+  products: Array<{ id: string; name: string }>
+  orderTrend: Array<{
+    date: string
+    orderCases: number
+    orderCount: number
+    inventorySnapshot: number | null
+  }>
+  productSummary: Array<{
+    productId: string
+    productName: string
+    casesOnHand: number
+    totalOrderedCases: number
+  }>
+  inventoryValue: Array<{
+    productId: string
+    productName: string
+    stockValue: number
+  }>
+}
+
+export async function fetchTmAnalytics(productId?: string, days?: number) {
+  const { data } = await apiClient.get<{ message: string; analytics: WarehouseAnalytics }>(
+    '/tm/warehouse/analytics',
+    { params: { ...(productId ? { productId } : {}), ...(days ? { days } : {}) } },
+  )
+  return data
+}
+
 // ─── Warehouse ────────────────────────────────────────────────────────────────
 
 export async function fetchMyWarehouse() {

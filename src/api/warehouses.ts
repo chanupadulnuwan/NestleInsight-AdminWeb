@@ -4,6 +4,7 @@ import type {
   ShopOwnerAssignmentRecord,
   VehicleRecord,
 } from './territories'
+import type { WarehouseAnalytics } from './tm'
 
 export type WarehouseOrderWindow = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ANNUALLY'
 
@@ -155,6 +156,18 @@ export async function updateWarehouseInventory(
     warehouse: WarehouseDetailRecord
   }>(`/warehouses/${warehouseId}/inventory`, { items })
 
+  return data
+}
+
+export async function fetchWarehouseAnalytics(
+  warehouseId: string,
+  productId?: string,
+  days?: number,
+) {
+  const { data } = await apiClient.get<{ message: string; analytics: WarehouseAnalytics }>(
+    `/warehouses/${warehouseId}/analytics`,
+    { params: { ...(productId ? { productId } : {}), ...(days ? { days } : {}) } },
+  )
   return data
 }
 
