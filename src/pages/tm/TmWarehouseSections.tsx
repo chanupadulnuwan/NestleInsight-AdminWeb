@@ -1,7 +1,9 @@
+import { Star } from 'lucide-react'
+import { type OrderFeedbackEntry, type TextFeedbackEntry } from '../../api/activity'
 import { type TmInventoryItem, type TmWarehouseUser, type TmWarehouseVehicle } from '../../api/tm'
 import { resolveMediaUrl } from '../../api/client'
 import { Pill } from './TmWarehouseOverlays'
-import { formatCurrency } from '../productsPage.helpers'
+import { formatCurrency, formatPortalDate } from '../productsPage.helpers'
 
 export const surfaceClass =
   'rounded-[1.8rem] border border-[#ebdfd5] bg-white shadow-[0_20px_48px_rgba(59,31,15,0.08)]'
@@ -73,6 +75,190 @@ export function InventorySection({ inventory }: { inventory: TmInventoryItem[] }
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {Array.from({ length: 5 }, (_, index) => (
+        <Star
+          key={index}
+          size={16}
+          strokeWidth={1.6}
+          className={
+            index < rating
+              ? 'fill-[#d9a441] text-[#d9a441]'
+              : 'text-[#d6c6b8]'
+          }
+        />
+      ))}
+    </div>
+  )
+}
+
+export function ShopOwnerFeedbackSection({
+  orderFeedbacks,
+  textFeedbacks,
+  loading,
+  error,
+}: {
+  orderFeedbacks: OrderFeedbackEntry[]
+  textFeedbacks: TextFeedbackEntry[]
+  loading: boolean
+  error: string | null
+}) {
+  const totalFeedbacks = orderFeedbacks.length + textFeedbacks.length
+
+  return (
+    <div className="space-y-5">
+      <section className={`${surfaceClass} px-6 py-6 sm:px-7`}>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">
+              Shop owner feedbacks
+            </p>
+            <h2 className="mt-2 text-[1.45rem] font-bold tracking-[-0.04em] text-[#4d3020]">
+              Immediate feedback from shop owners
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-[#7f6657]">
+              Review direct comments and completed-order ratings from the shops linked to this
+              warehouse. Feedback now stays here so route approvals and other warehouse activity
+              remain clean even when many comments come in.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-[1.2rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#8a6c58]">
+                Total feedbacks
+              </p>
+              <p className="mt-2 text-2xl font-bold text-[#4d3020]">{totalFeedbacks}</p>
+            </div>
+            <div className="rounded-[1.2rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#8a6c58]">
+                Order ratings
+              </p>
+              <p className="mt-2 text-2xl font-bold text-[#4d3020]">{orderFeedbacks.length}</p>
+            </div>
+            <div className="rounded-[1.2rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#8a6c58]">
+                Direct comments
+              </p>
+              <p className="mt-2 text-2xl font-bold text-[#4d3020]">{textFeedbacks.length}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {loading ? (
+        <div className={`${surfaceClass} px-5 py-10 text-center text-sm text-[#7f6657]`}>
+          Loading shop owner feedbacks...
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className={`${surfaceClass} px-5 py-8 text-center text-sm text-red-600`}>
+          {error}
+        </div>
+      ) : null}
+
+      {!loading && !error ? (
+        <div className="grid gap-5 xl:grid-cols-2">
+          <section className={`${surfaceClass} overflow-hidden`}>
+            <div className="border-b border-[#ebdfd5] px-5 py-4">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#a37d63]">
+                Completed order ratings
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[#7f6657]">
+                Star ratings and comments submitted after completed deliveries.
+              </p>
+            </div>
+            <div className="max-h-[34rem] space-y-3 overflow-y-auto px-5 py-5">
+              {orderFeedbacks.length === 0 ? (
+                <div className="rounded-[1.2rem] border border-dashed border-[#d9c9bb] bg-[#fffaf7] px-4 py-6 text-sm text-[#7f6657]">
+                  No completed-order feedback has been submitted yet.
+                </div>
+              ) : (
+                orderFeedbacks.map((feedbackItem) => (
+                  <article
+                    key={feedbackItem.id}
+                    className="rounded-[1.2rem] border border-[#eee2d7] bg-[#fffaf7] px-4 py-4"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="font-semibold text-[#4d3020]">
+                          {feedbackItem.shopOwner.firstName} {feedbackItem.shopOwner.lastName}
+                        </p>
+                        <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#8a6c58]">
+                          Order #{feedbackItem.order.id.slice(0, 8).toUpperCase()}
+                        </p>
+                      </div>
+                      <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#a37d63]">
+                        {formatPortalDate(feedbackItem.createdAt)}
+                      </p>
+                    </div>
+                    <div className="mt-4 flex items-center gap-3">
+                      <StarRating rating={feedbackItem.rating} />
+                      <span className="text-sm font-semibold text-[#8b5a3a]">
+                        {feedbackItem.rating}/5
+                      </span>
+                    </div>
+                    <p className="mt-4 text-sm leading-7 text-[#6f5648]">
+                      {feedbackItem.comment?.trim()
+                        ? `"${feedbackItem.comment.trim()}"`
+                        : 'This shop owner left a rating without an extra comment.'}
+                    </p>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className={`${surfaceClass} overflow-hidden`}>
+            <div className="border-b border-[#ebdfd5] px-5 py-4">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#a37d63]">
+                Direct feedback messages
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[#7f6657]">
+                Immediate notes submitted directly by shop owners in the app.
+              </p>
+            </div>
+            <div className="max-h-[34rem] space-y-3 overflow-y-auto px-5 py-5">
+              {textFeedbacks.length === 0 ? (
+                <div className="rounded-[1.2rem] border border-dashed border-[#d9c9bb] bg-[#fffaf7] px-4 py-6 text-sm text-[#7f6657]">
+                  No direct feedback messages have been received yet.
+                </div>
+              ) : (
+                textFeedbacks.map((feedbackItem) => (
+                  <article
+                    key={feedbackItem.id}
+                    className="rounded-[1.2rem] border border-[#eee2d7] bg-[#fffaf7] px-4 py-4"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="font-semibold text-[#4d3020]">
+                          {feedbackItem.firstName} {feedbackItem.lastName}
+                          {feedbackItem.shopName ? ` (${feedbackItem.shopName})` : ''}
+                        </p>
+                        <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#8a6c58]">
+                          General feedback
+                        </p>
+                      </div>
+                      <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#a37d63]">
+                        {formatPortalDate(feedbackItem.createdAt)}
+                      </p>
+                    </div>
+                    <p className="mt-4 text-sm leading-7 text-[#6f5648]">
+                      "{feedbackItem.message}"
+                    </p>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   )
 }

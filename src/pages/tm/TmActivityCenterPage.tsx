@@ -1,14 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { Star } from "lucide-react";
 import {
   fetchPortalActivities,
-  getMyTerritoryFeedback,
-  getMyTerritoryTextFeedback,
   reviewRouteDeliveryApprovalRequest,
   reviewRouteLoadRequest,
-  type OrderFeedbackEntry,
-  type TextFeedbackEntry,
   type PortalActivityEntry,
 } from "../../api/activity";
 import { getApiErrorMessage } from "../../api/client";
@@ -57,23 +52,6 @@ function activityTone(type: string) {
 
 function formatTimestamp(value: string) {
   return new Date(value).toLocaleString();
-}
-
-function StarRatingDark({ rating }: { rating: number }) {
-  return (
-    <div className="flex items-center gap-1">
-      {Array.from({ length: 5 }, (_, i) => (
-        <Star
-          key={i}
-          size={18}
-          strokeWidth={i < rating ? 0 : 1.5}
-          className={
-            i < rating ? "fill-amber-400 text-amber-400" : "text-slate-500"
-          }
-        />
-      ))}
-    </div>
-  );
 }
 
 function getApprovalTarget(activity: PortalActivityEntry) {
@@ -154,8 +132,6 @@ function getApprovalActivityReference(
 export default function TmActivityCenterPage() {
   const { user, isUnauthorized } = useTmGuard();
   const [activities, setActivities] = useState<PortalActivityEntry[]>([]);
-  const [feedbacks, setFeedbacks] = useState<OrderFeedbackEntry[]>([]);
-  const [textFeedbacks, setTextFeedbacks] = useState<TextFeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
@@ -166,15 +142,9 @@ export default function TmActivityCenterPage() {
   if (isUnauthorized) return <Navigate to="/" replace />;
 
   useEffect(() => {
-    Promise.all([
-      fetchPortalActivities(),
-      getMyTerritoryFeedback(),
-      getMyTerritoryTextFeedback(),
-    ])
-      .then(([activitiesResponse, feedbackResponse, textFeedbackResponse]) => {
+    fetchPortalActivities()
+      .then((activitiesResponse) => {
         setActivities(activitiesResponse.activities);
-        setFeedbacks(feedbackResponse);
-        setTextFeedbacks(textFeedbackResponse);
       })
       .catch((requestError) => setError(getApiErrorMessage(requestError)))
       .finally(() => setLoading(false));
@@ -215,24 +185,24 @@ export default function TmActivityCenterPage() {
     () =>
       activities.filter((activity) => {
         const isApprovalAction = getApprovalTarget(activity) !== null;
-        return !isApprovalAction && activity.type !== "ORDER_FEEDBACK";
+        return !isApprovalAction && !activity.type.includes("FEEDBACK");
       }),
     [activities],
   );
 
   const groupedHighlights = useMemo(() => {
     return {
-      total: activities.length,
+      total: actionableActivities.length + generalActivities.length,
       routeApprovals: actionableActivities.length,
-      stockAlerts: activities.filter(
+      stockAlerts: generalActivities.filter(
         (item) =>
           item.type.includes("LOW_STOCK") || item.type.includes("REFILL"),
       ).length,
-      completedOrders: activities.filter((item) =>
+      completedOrders: generalActivities.filter((item) =>
         item.type.includes("ORDER_COMPLETED"),
       ).length,
     };
-  }, [actionableActivities.length, activities]);
+  }, [actionableActivities.length, generalActivities]);
 
   const handleReview = async (
     activity: PortalActivityEntry,
@@ -308,7 +278,7 @@ export default function TmActivityCenterPage() {
       user={user}
       breadcrumb="Territory Manager / Activity Center"
       title="Activity Center"
-      description="Review route start approvals, warehouse alerts, customer feedback, and general territory activity in one place."
+      description="Review route start approvals, warehouse alerts, and general territory activity in one place."
       pendingCounts={{ approvals: actionableActivities.length }}
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -439,73 +409,6 @@ export default function TmActivityCenterPage() {
           ) : null}
         </div>
       </div>
-
-      {(feedbacks.length > 0 || textFeedbacks.length > 0) && (
-        <div className="mt-8 mb-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-[#4d3020]">
-              Shop Owner Feedback
-            </h2>
-            <span className="rounded-full bg-[#f0d070] px-3 py-1 text-sm font-bold text-[#7a5a00]">
-              {feedbacks.length + textFeedbacks.length} Total
-            </span>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            {feedbacks.map((f) => (
-              <div
-                key={f.id}
-                className="flex flex-col gap-3 rounded-2xl bg-slate-800 p-5 shadow-lg"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-slate-100">
-                      {f.shopOwner.firstName} {f.shopOwner.lastName}
-                    </p>
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      Order #{f.order.id.substring(0, 8)}
-                    </p>
-                  </div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-                    {formatTimestamp(f.createdAt)}
-                  </p>
-                </div>
-                <div className="mt-1">
-                  <StarRatingDark rating={f.rating} />
-                </div>
-                {f.comment && (
-                  <p className="mt-2 text-sm leading-relaxed text-slate-300 italic">
-                    "{f.comment}"
-                  </p>
-                )}
-              </div>
-            ))}
-            {textFeedbacks.map((f) => (
-              <div
-                key={f.id}
-                className="flex flex-col gap-3 rounded-2xl border border-slate-600 bg-slate-700 p-5 shadow-lg"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-slate-100">
-                      {f.firstName} {f.lastName}{" "}
-                      {f.shopName && `(${f.shopName})`}
-                    </p>
-                    <p className="mt-0.5 text-xs font-semibold uppercase text-sky-400">
-                      General Feedback
-                    </p>
-                  </div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-                    {formatTimestamp(f.createdAt)}
-                  </p>
-                </div>
-                <p className="mt-2 text-sm leading-relaxed text-slate-300 italic">
-                  "{f.message}"
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <h2 className="mb-4 mt-8 text-xl font-bold text-[#4d3020]">
         General Activity

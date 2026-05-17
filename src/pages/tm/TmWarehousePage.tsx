@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
+import {
+  getMyTerritoryFeedback,
+  getMyTerritoryTextFeedback,
+  type OrderFeedbackEntry,
+  type TextFeedbackEntry,
+} from '../../api/activity'
 import { assignVehicleToWarehouse, fetchMyWarehouse, type TmWarehouse } from '../../api/tm'
 import { getApiErrorMessage } from '../../api/client'
 import { TerritoryManagerPortalShell } from '../../components/TerritoryManagerPortalShell'
@@ -14,10 +20,11 @@ import {
 import {
   InventorySection,
   PeopleTable,
+  ShopOwnerFeedbackSection,
   VehiclesSection,
 } from './TmWarehouseSections'
 
-type WarehouseTab = 'inventory' | 'vehicles' | 'employees' | 'shops'
+type WarehouseTab = 'inventory' | 'vehicles' | 'employees' | 'shops' | 'feedbacks'
 
 export default function TmWarehousePage() {
   const { user, isUnauthorized } = useTmGuard()
@@ -30,6 +37,10 @@ export default function TmWarehousePage() {
   const [assigningVehicleId, setAssigningVehicleId] = useState<string | null>(null)
   const [vehicleAssignMessage, setVehicleAssignMessage] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<WarehouseTab>('inventory')
+  const [orderFeedbacks, setOrderFeedbacks] = useState<OrderFeedbackEntry[]>([])
+  const [textFeedbacks, setTextFeedbacks] = useState<TextFeedbackEntry[]>([])
+  const [feedbackLoading, setFeedbackLoading] = useState(true)
+  const [feedbackError, setFeedbackError] = useState<string | null>(null)
 
   if (isUnauthorized) {
     return <Navigate to="/" replace />
@@ -44,8 +55,21 @@ export default function TmWarehousePage() {
       .finally(() => setLoading(false))
   }
 
+  const loadFeedbacks = () => {
+    setFeedbackLoading(true)
+    setFeedbackError(null)
+    Promise.all([getMyTerritoryFeedback(), getMyTerritoryTextFeedback()])
+      .then(([nextOrderFeedbacks, nextTextFeedbacks]) => {
+        setOrderFeedbacks(nextOrderFeedbacks)
+        setTextFeedbacks(nextTextFeedbacks)
+      })
+      .catch((requestError) => setFeedbackError(getApiErrorMessage(requestError)))
+      .finally(() => setFeedbackLoading(false))
+  }
+
   useEffect(() => {
     load()
+    loadFeedbacks()
   }, [])
 
   const employees = useMemo(
@@ -94,7 +118,10 @@ export default function TmWarehousePage() {
       user={user}
       breadcrumb="Territory Manager - Warehouse"
       title={warehouse?.name ?? 'My Warehouse'}
-      description={warehouse?.address ?? 'Review your assigned warehouse, inventory, vehicles, employees, and shops.'}
+      description={
+        warehouse?.address ??
+        'Review your assigned warehouse, inventory, vehicles, employees, shops, and shop-owner feedbacks.'
+      }
       actions={action}
     >
       {loading ? <p className="py-12 text-center text-sm text-[#7f6657]">Loading warehouse...</p> : null}
@@ -124,6 +151,7 @@ export default function TmWarehousePage() {
               ['vehicles', 'Vehicles', warehouse.vehicles.length + warehouse.availableVehicles.length],
               ['employees', 'Employees', employees.length],
               ['shops', 'Shops', shops.length],
+              ['feedbacks', 'Shop Owner Feedbacks', orderFeedbacks.length + textFeedbacks.length],
             ] as Array<[WarehouseTab, string, number]>).map(([key, label, count]) => (
               <button
                 key={key}
@@ -166,6 +194,14 @@ export default function TmWarehousePage() {
               emptyMessage="No shop owners are assigned to this warehouse yet."
               shopMode
               onSelect={setSelectedUserId}
+            />
+          ) : null}
+          {activeTab === 'feedbacks' ? (
+            <ShopOwnerFeedbackSection
+              orderFeedbacks={orderFeedbacks}
+              textFeedbacks={textFeedbacks}
+              loading={feedbackLoading}
+              error={feedbackError}
             />
           ) : null}
         </>
