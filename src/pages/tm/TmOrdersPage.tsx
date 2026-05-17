@@ -45,6 +45,125 @@ function paymentMethodLabel(paymentMethod: string) {
     : 'Standard checkout'
 }
 
+function OrderDetailsModal({
+  order,
+  onClose,
+}: {
+  order: TmOrder
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-3xl rounded-[2rem] border border-[#ebdfd5] bg-white p-8 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8a6c58]">
+              Order details
+            </p>
+            <h2 className="mt-2 text-2xl font-bold text-[#4d3020]">{order.orderCode}</h2>
+            <p className="mt-2 text-sm text-[#7f6657]">
+              {order.shopName} • {statusLabel(order.status)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-[1rem] border border-[#d7baa3] bg-white px-4 py-2 text-sm font-semibold text-[#6e4d3b] transition duration-300 hover:border-[#c9976f] hover:text-[#4d3020]"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            ['Payment', paymentMethodLabel(order.paymentMethod)],
+            ['Placed', new Date(order.placedAt).toLocaleString()],
+            ['Due', new Date(order.deliveryDueAt).toLocaleString()],
+            ['Final total', formatCurrency(order.totalAfterDiscount ?? order.totalAmount)],
+          ].map(([label, value]) => (
+            <div
+              key={String(label)}
+              className="rounded-[1.2rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#8a6c58]">
+                {label}
+              </p>
+              <p className="mt-2 text-sm font-semibold text-[#4d3020]">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-[1.4rem] border border-[#eee2d7] bg-[#fffdfb] px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#8a6c58]">
+              Promotion
+            </p>
+            <p className="mt-2 text-sm text-[#4d3020]">
+              {order.appliedPromotionCode ? `Promo ${order.appliedPromotionCode}` : 'No promotion applied'}
+            </p>
+            {(order.promotionDiscountTotal ?? 0) > 0 ? (
+              <div className="mt-3 space-y-1 text-sm text-[#7f6657]">
+                <p>Before: {formatCurrency(order.subtotalBeforeDiscount ?? order.totalAmount)}</p>
+                <p className="font-semibold text-[#4d6c45]">
+                  Discount: -{formatCurrency(order.promotionDiscountTotal ?? 0)}
+                </p>
+              </div>
+            ) : null}
+          </div>
+          <div className="rounded-[1.4rem] border border-[#eee2d7] bg-[#fffdfb] px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#8a6c58]">
+              Customer note
+            </p>
+            <p className="mt-2 text-sm text-[#4d3020]">
+              {order.customerNote?.trim() || 'No note added to this order.'}
+            </p>
+            {order.delayReason ? (
+              <p className="mt-3 text-sm font-semibold text-[#8c5d0d]">
+                Delay reason: {order.delayReason}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-[1.5rem] border border-[#ebdfd5] bg-[#fffaf7]">
+          <div className="border-b border-[#ebdfd5] px-5 py-4">
+            <h3 className="text-lg font-bold text-[#4d3020]">Ordered products</h3>
+          </div>
+          <div className="divide-y divide-[#f1e5db]">
+            {order.items.map((item) => (
+              <div
+                key={item.id}
+                className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
+              >
+                <div>
+                  <p className="font-semibold text-[#4d3020]">{item.productName}</p>
+                  <p className="mt-1 text-xs text-[#7f6657]">
+                    Product ID: {item.productId ?? 'Not available'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-semibold text-[#4d3020]">
+                    {item.quantity} case{item.quantity === 1 ? '' : 's'}
+                  </p>
+                  <p className="mt-1 text-xs text-[#7f6657]">
+                    {formatCurrency(item.lineTotal)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DelayModal({
   order,
   onClose,
@@ -305,6 +424,7 @@ export default function TmOrdersPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [delayTarget, setDelayTarget] = useState<TmOrder | null>(null)
+  const [detailTarget, setDetailTarget] = useState<TmOrder | null>(null)
   const [showAssign, setShowAssign] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
@@ -471,8 +591,9 @@ export default function TmOrdersPage() {
                   {filteredOrders.map((order) => (
                     <tr
                       key={order.id}
+                      onClick={() => setDetailTarget(order)}
                       className={[
-                        'border-b border-[#f1e5db] last:border-0',
+                        'cursor-pointer border-b border-[#f1e5db] last:border-0',
                         order.isOverdue ? 'bg-[#fff8ef]' : 'hover:bg-[#fffaf7]',
                         selectedIds.has(order.id) ? 'bg-[#fff1e6]' : '',
                       ].join(' ')}
@@ -482,6 +603,7 @@ export default function TmOrdersPage() {
                           <input
                             type="checkbox"
                             checked={selectedIds.has(order.id)}
+                            onClick={(event) => event.stopPropagation()}
                             onChange={() => toggleSelect(order.id)}
                             className="h-4 w-4 rounded border-[#d7baa3] text-[#8b5a3a]"
                           />
@@ -549,14 +671,40 @@ export default function TmOrdersPage() {
                       </td>
                       <td className="px-4 py-3.5">
                         {!['COMPLETED', 'CANCELLED', 'DELAYED'].includes(order.status) ? (
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                setDetailTarget(order)
+                              }}
+                              className="rounded-[1rem] border border-[#d7baa3] bg-white px-3 py-2 text-xs font-semibold text-[#6e4d3b] transition duration-300 hover:border-[#c9976f] hover:text-[#4d3020]"
+                            >
+                              View details
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                setDelayTarget(order)
+                              }}
+                              className="rounded-[1rem] border border-[#f0c96d] bg-[#fff2c8] px-3 py-2 text-xs font-semibold text-[#8c5d0d] transition duration-300 hover:bg-[#ffe7a0]"
+                            >
+                              Mark delayed
+                            </button>
+                          </div>
+                        ) : (
                           <button
                             type="button"
-                            onClick={() => setDelayTarget(order)}
-                            className="rounded-[1rem] border border-[#f0c96d] bg-[#fff2c8] px-3 py-2 text-xs font-semibold text-[#8c5d0d] transition duration-300 hover:bg-[#ffe7a0]"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setDetailTarget(order)
+                            }}
+                            className="rounded-[1rem] border border-[#d7baa3] bg-white px-3 py-2 text-xs font-semibold text-[#6e4d3b] transition duration-300 hover:border-[#c9976f] hover:text-[#4d3020]"
                           >
-                            Mark delayed
+                            View details
                           </button>
-                        ) : null}
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -583,6 +731,10 @@ export default function TmOrdersPage() {
             setMessage('Order marked as delayed.')
           }}
         />
+      ) : null}
+
+      {detailTarget ? (
+        <OrderDetailsModal order={detailTarget} onClose={() => setDetailTarget(null)} />
       ) : null}
 
       {showAssign ? (

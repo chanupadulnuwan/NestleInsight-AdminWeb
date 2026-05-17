@@ -291,6 +291,9 @@ export default function TmActivityCenterPage() {
           },
         }));
       }
+
+      const refreshedActivities = await fetchPortalActivities();
+      setActivities(refreshedActivities.activities);
     } catch (requestError) {
       setError(getApiErrorMessage(requestError));
     } finally {

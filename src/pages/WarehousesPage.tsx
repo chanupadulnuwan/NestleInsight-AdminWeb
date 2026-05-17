@@ -19,6 +19,7 @@ import {
 } from '../api/warehouses'
 import { getApiErrorCode, getApiErrorMessage } from '../api/client'
 import { AdminPortalShell } from '../components/AdminPortalShell'
+import StockAnalyticsSection from '../components/StockAnalyticsSection'
 import { useAuth } from '../context/AuthContext'
 import { formatCurrency, formatPortalDate, surfaceClassName } from './productsPage.helpers'
 
@@ -887,6 +888,16 @@ export default function WarehousesPage() {
                 <MetricCard label="Cases On Hand" value={selectedWarehouse.inventorySummary.totalCasesOnHand} />
                 <MetricCard label="Stock Value" value={formatCurrency(selectedWarehouse.inventorySummary.totalStockValue)} />
                 <MetricCard label="Low Stock" value={selectedWarehouse.inventorySummary.lowStockProducts} />
+              </div>
+
+              <div className="rounded-[1.4rem] border border-[#eee2d7] bg-[#fffdfb] p-5">
+                <div className="mb-4">
+                  <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Stock Analytics</p>
+                  <p className="mt-2 text-sm leading-6 text-[#7f6657]">
+                    Compare inventory cases, ordered cases, current stock money value, and order revenue across one warehouse or all warehouses.
+                  </p>
+                </div>
+                <StockAnalyticsSection isAdmin />
               </div>
 
               <div className="grid gap-4 xl:grid-cols-2">

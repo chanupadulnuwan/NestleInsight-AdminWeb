@@ -121,6 +121,7 @@ function tmChartBundle(
     orderCases: trendMap.get(date) ?? 0,
     inventorySnapshot: snapshot,
   }))
+  let visibleBars: ProductBar[] = []
 
   // Bar chart — per product, inventory + ordered cases
   const productOrderMap = new Map<string, number>()
@@ -141,13 +142,26 @@ function tmChartBundle(
     casesOnHand: item.quantityOnHand,
     orderedCases: productOrderMap.get(item.productId) ?? 0,
   }))
+  visibleBars = bars.filter(
+    (item) => !selectedProductId || item.productId === selectedProductId,
+  )
 
   const products: ProductOption[] = inventory.map((i) => ({
     id: i.productId,
     name: i.productName ?? '—',
   }))
 
-  return { trend, bars, pie: [], products }
+  const totalStockValue = inventory.reduce((sum, item) => sum + item.stockValue, 0)
+  const totalRevenue = recent.reduce(
+    (sum, order) => sum + (order.totalAfterDiscount ?? order.totalAmount),
+    0,
+  )
+  const pie: PieSlice[] = [
+    { name: 'Current Stock Value', value: Number(totalStockValue.toFixed(2)) },
+    { name: 'Order Revenue', value: Number(totalRevenue.toFixed(2)) },
+  ]
+
+  return { trend, bars: visibleBars, pie, products }
 }
 
 function adminChartBundle(
@@ -178,6 +192,7 @@ function adminChartBundle(
     orderCases: trendMap.get(date) ?? 0,
     inventorySnapshot: snapshot,
   }))
+  let visibleBars: ProductBar[] = []
 
   // Bar chart — per product inventory + ordered cases from productOrderTotals
   const bars: ProductBar[] = inventories.map((item) => ({
@@ -188,6 +203,10 @@ function adminChartBundle(
   }))
 
   // Pie chart — 2 segments: stock value vs order revenue
+  visibleBars = bars.filter(
+    (item) => !selectedProductId || item.productId === selectedProductId,
+  )
+
   const totalStockValue = inventories.reduce((sum, i) => sum + i.stockValue, 0)
   const totalRevenue = recent.reduce((sum, o) => sum + o.totalAmount, 0)
 
@@ -201,7 +220,7 @@ function adminChartBundle(
     name: i.productName,
   }))
 
-  return { trend, bars, pie, products }
+  return { trend, bars: visibleBars, pie, products }
 }
 
 function mergeAdminBundles(bundles: ChartBundle[], days: number): ChartBundle {
@@ -451,7 +470,9 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
                     borderColor: '#ebdfd5',
                     fontSize: 12,
                   }}
-                  labelFormatter={(label: string) => new Date(label).toLocaleDateString()}
+                  labelFormatter={(label: unknown) =>
+                    new Date(String(label ?? '')).toLocaleDateString()
+                  }
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 {selectedProduct && (
@@ -520,8 +541,8 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
                           borderColor: '#ebdfd5',
                           fontSize: 12,
                         }}
-                        labelFormatter={(_: unknown, payload: unknown[]) => {
-                          const p = payload as Array<{ payload?: ProductBar }>
+                        labelFormatter={(_: unknown, payload: readonly unknown[]) => {
+                          const p = payload as ReadonlyArray<{ payload?: ProductBar }>
                           return p?.[0]?.payload?.productName ?? ''
                         }}
                       />
@@ -546,7 +567,7 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
           </div>
 
           {/* ── Chart 3: Pie chart (admin only) ──────────────────────────── */}
-          {isAdmin && bundle.pie.some((s) => s.value > 0) && (
+          {bundle.pie.some((s) => s.value > 0) && (
             <div className={`${surfaceClass} p-6`}>
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#a37d63]">
                 Monetary value
@@ -554,7 +575,9 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
               <h3 className="mb-1 text-base font-bold text-[#4d3020]">
                 Stock Value vs Order Revenue
               </h3>
-              <p className="mb-4 text-xs text-[#7f6657]">{warehouseLabel}</p>
+              <p className="mb-4 text-xs text-[#7f6657]">
+                {isAdmin ? warehouseLabel : 'Current warehouse'}
+              </p>
 
               <div className="flex flex-col gap-6 md:flex-row md:items-center">
                 <div className="w-full md:w-1/2">
@@ -580,8 +603,8 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
                           borderColor: '#ebdfd5',
                           fontSize: 12,
                         }}
-                        formatter={(value: number) => [
-                          formatCurrency(value),
+                        formatter={(value: unknown) => [
+                          formatCurrency(Number(value ?? 0)),
                           '',
                         ]}
                       />
