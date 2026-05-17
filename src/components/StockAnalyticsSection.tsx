@@ -40,6 +40,12 @@ const DAY_OPTIONS = [
   { label: 'Last 90 days', value: 90 },
 ]
 
+function readNumber(value: unknown) {
+  const numericValue =
+    typeof value === 'number' ? value : Number.parseFloat(`${value ?? 0}`)
+  return Number.isFinite(numericValue) ? numericValue : 0
+}
+
 function shortLabel(name: string | undefined | null, max = 16) {
   if (!name) return '—'
   return name.length > max ? name.slice(0, max - 1) + '…' : name
@@ -107,14 +113,14 @@ function tmChartBundle(
     const items = selectedProductId
       ? order.items.filter((i) => i.productId === selectedProductId)
       : order.items
-    const cases = items.reduce((sum, i) => sum + i.quantity, 0)
+    const cases = items.reduce((sum, i) => sum + readNumber(i.quantity), 0)
     trendMap.set(dateStr, (trendMap.get(dateStr) ?? 0) + cases)
   }
 
   const selectedInv = selectedProductId
     ? inventory.find((i) => i.productId === selectedProductId)
     : null
-  const snapshot = selectedInv?.quantityOnHand ?? null
+  const snapshot = selectedInv ? readNumber(selectedInv.quantityOnHand) : null
 
   const trend: TrendPoint[] = buildDateRange(days).map((date) => ({
     date,
@@ -130,7 +136,7 @@ function tmChartBundle(
       if (item.productId) {
         productOrderMap.set(
           item.productId,
-          (productOrderMap.get(item.productId) ?? 0) + item.quantity,
+          (productOrderMap.get(item.productId) ?? 0) + readNumber(item.quantity),
         )
       }
     }
@@ -139,8 +145,8 @@ function tmChartBundle(
   const bars: ProductBar[] = inventory.map((item) => ({
     productId: item.productId,
     productName: item.productName ?? '—',
-    casesOnHand: item.quantityOnHand,
-    orderedCases: productOrderMap.get(item.productId) ?? 0,
+    casesOnHand: readNumber(item.quantityOnHand),
+    orderedCases: readNumber(productOrderMap.get(item.productId) ?? 0),
   }))
   visibleBars = bars.filter(
     (item) => !selectedProductId || item.productId === selectedProductId,
@@ -151,9 +157,12 @@ function tmChartBundle(
     name: i.productName ?? '—',
   }))
 
-  const totalStockValue = inventory.reduce((sum, item) => sum + item.stockValue, 0)
+  const totalStockValue = inventory.reduce(
+    (sum, item) => sum + readNumber(item.stockValue),
+    0,
+  )
   const totalRevenue = recent.reduce(
-    (sum, order) => sum + (order.totalAfterDiscount ?? order.totalAmount),
+    (sum, order) => sum + readNumber(order.totalAfterDiscount ?? order.totalAmount),
     0,
   )
   const pie: PieSlice[] = [
@@ -179,13 +188,13 @@ function adminChartBundle(
   const trendMap = new Map<string, number>()
   for (const order of recent) {
     const dateStr = new Date(order.placedAt).toISOString().split('T')[0]
-    trendMap.set(dateStr, (trendMap.get(dateStr) ?? 0) + order.totalCases)
+    trendMap.set(dateStr, (trendMap.get(dateStr) ?? 0) + readNumber(order.totalCases))
   }
 
   const selectedInv = selectedProductId
     ? inventories.find((i) => i.productId === selectedProductId)
     : null
-  const snapshot = selectedInv?.casesOnHand ?? null
+  const snapshot = selectedInv ? readNumber(selectedInv.casesOnHand) : null
 
   const trend: TrendPoint[] = buildDateRange(days).map((date) => ({
     date,
@@ -198,8 +207,8 @@ function adminChartBundle(
   const bars: ProductBar[] = inventories.map((item) => ({
     productId: item.productId,
     productName: item.productName,
-    casesOnHand: item.casesOnHand,
-    orderedCases: productOrderTotals[item.productId] ?? 0,
+    casesOnHand: readNumber(item.casesOnHand),
+    orderedCases: readNumber(productOrderTotals[item.productId] ?? 0),
   }))
 
   // Pie chart — 2 segments: stock value vs order revenue
@@ -207,8 +216,8 @@ function adminChartBundle(
     (item) => !selectedProductId || item.productId === selectedProductId,
   )
 
-  const totalStockValue = inventories.reduce((sum, i) => sum + i.stockValue, 0)
-  const totalRevenue = recent.reduce((sum, o) => sum + o.totalAmount, 0)
+  const totalStockValue = inventories.reduce((sum, i) => sum + readNumber(i.stockValue), 0)
+  const totalRevenue = recent.reduce((sum, o) => sum + readNumber(o.totalAmount), 0)
 
   const pie: PieSlice[] = [
     { name: 'Current Stock Value', value: Number(totalStockValue.toFixed(2)) },
@@ -253,8 +262,8 @@ function mergeAdminBundles(bundles: ChartBundle[], days: number): ChartBundle {
   const bars = Array.from(barMap.values())
 
   // Merge pie slices (both bundles have same 2-slot structure)
-  const stockValue = bundles.reduce((sum, b) => sum + (b.pie[0]?.value ?? 0), 0)
-  const revenue = bundles.reduce((sum, b) => sum + (b.pie[1]?.value ?? 0), 0)
+  const stockValue = bundles.reduce((sum, b) => sum + readNumber(b.pie[0]?.value ?? 0), 0)
+  const revenue = bundles.reduce((sum, b) => sum + readNumber(b.pie[1]?.value ?? 0), 0)
   const pie: PieSlice[] = [
     { name: 'Current Stock Value', value: Number(stockValue.toFixed(2)) },
     { name: 'Order Revenue', value: Number(revenue.toFixed(2)) },
@@ -515,13 +524,13 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
             ) : (
               <div className="overflow-x-auto">
                 <div style={{ minWidth: Math.max(420, bundle.bars.length * 64) }}>
-                  <ResponsiveContainer width="100%" height={320}>
+                  <ResponsiveContainer width="100%" height={368}>
                     <BarChart
                       data={bundle.bars.map((b) => ({
                         ...b,
                         label: shortLabel(b.productName),
                       }))}
-                      margin={{ top: 4, right: 16, left: 0, bottom: 60 }}
+                      margin={{ top: 4, right: 16, left: 0, bottom: 92 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1e5db" />
                       <XAxis
@@ -530,6 +539,7 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
                         angle={-35}
                         textAnchor="end"
                         interval={0}
+                        height={84}
                       />
                       <YAxis
                         tick={{ fontSize: 11, fill: '#8a6c58' }}
@@ -546,7 +556,11 @@ export default function StockAnalyticsSection({ isAdmin }: Props) {
                           return p?.[0]?.payload?.productName ?? ''
                         }}
                       />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Legend
+                        verticalAlign="bottom"
+                        height={36}
+                        wrapperStyle={{ fontSize: 12, paddingTop: 18 }}
+                      />
                       <Bar
                         dataKey="casesOnHand"
                         name="Inventory Cases"
