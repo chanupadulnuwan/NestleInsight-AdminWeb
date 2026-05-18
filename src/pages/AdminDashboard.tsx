@@ -5,6 +5,7 @@ import { getApiErrorMessage } from '../api/client'
 import DemandForecastExportSection from '../components/DemandForecastExportSection'
 import DemandForecastEngineSection from '../components/DemandForecastEngineSection'
 import DemandPlannerInsightCenterSection from '../components/DemandPlannerInsightCenterSection'
+import AdminOrdersSection from '../components/AdminOrdersSection'
 import ReportDashboardSection from '../components/ReportDashboardSection'
 import StockAnalyticsSection from '../components/StockAnalyticsSection'
 import { approvePendingUser, fetchPendingUsers, rejectPendingUser } from '../api/users'
@@ -23,6 +24,7 @@ const navigationItems: Array<{ key: AdminSection; label: string }> = [
 ]
 const DEMAND_PLANNER_NAVIGATION_ITEMS: Array<{ key: AdminSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
+  { key: 'stocks', label: 'Stocks' },
   { key: 'exports', label: 'Exports' },
   { key: 'forecast-engine', label: 'Forecast Engine' },
   { key: 'insight-center', label: 'Insight Center' },
@@ -438,7 +440,7 @@ export default function AdminDashboard() {
     orders: {
       breadcrumb: 'Portal / Orders',
       title: 'Orders',
-      description: 'Track order flow and keep space ready for future admin order modules.',
+      description: 'Review all portal orders, filter by date or location, and open each order for full product and discount details.',
     },
     stocks: {
       breadcrumb: 'Portal / Stocks',
@@ -748,25 +750,7 @@ export default function AdminDashboard() {
       </section>
     )
   } else if (activeSection === 'orders') {
-    content = (
-      <section className="grid gap-5 xl:grid-cols-2">
-        <article className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Order Flow</p>
-          <h2 className="mt-3 text-[1.75rem] font-bold tracking-[-0.04em] text-[#4d3020]">Orders workspace structure is in place</h2>
-          <div className="mt-5 space-y-3 text-sm leading-7 text-[#7f6657]">
-            <div className="rounded-[1.3rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">New order approvals can land in this panel next.</div>
-            <div className="rounded-[1.3rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4">Dispatch planning and returns can share the same layout.</div>
-          </div>
-        </article>
-        <article className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#a37d63]">Quick Snapshot</p>
-          <div className="mt-5 grid gap-4">
-            <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4"><p className="text-sm font-semibold text-[#8a6c58]">Priority queue</p><p className="mt-2 text-[1.55rem] font-bold text-[#4d3020]">24 orders</p></div>
-            <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-4 py-4"><p className="text-sm font-semibold text-[#8a6c58]">Dispatch windows</p><p className="mt-2 text-[1.55rem] font-bold text-[#4d3020]">06 active</p></div>
-          </div>
-        </article>
-      </section>
-    )
+    content = <AdminOrdersSection />
   } else if (activeSection === 'stocks') {
     content = (
       <section className="space-y-2">
