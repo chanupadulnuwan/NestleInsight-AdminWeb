@@ -90,7 +90,8 @@ function demandTypeLabel(value: 'REPLENISHMENT_DEMAND' | 'ESTIMATED_RETAIL_OFFTA
 }
 
 function sourceBadgeClassName(sourceType: InsightKpi['sourceType'] | string) {
-  if (sourceType === 'exact') return 'border-[#c9dac1] bg-[#f4fbef] text-[#536f44]'
+  if (sourceType === 'exact')
+    return 'border-[rgba(144,151,122,0.4)] bg-[rgba(144,151,122,0.14)] text-[#616a41]'
   if (sourceType === 'estimated') return 'border-[#e5d0a3] bg-[#fff8e7] text-[#80622b]'
   return 'border-[#c9d9de] bg-[#eef8fa] text-[#3d6e77]'
 }
@@ -98,13 +99,13 @@ function sourceBadgeClassName(sourceType: InsightKpi['sourceType'] | string) {
 function severityClassName(severity: InsightExceptionRow['severity']) {
   if (severity === 'HIGH') return 'border-[#e5b8a8] bg-[#fff2ee] text-[#96513d]'
   if (severity === 'MEDIUM') return 'border-[#e6d2a5] bg-[#fff8e8] text-[#80612c]'
-  return 'border-[#d5e4c7] bg-[#f5fbef] text-[#5b7145]'
+  return 'border-[rgba(144,151,122,0.38)] bg-[rgba(144,151,122,0.14)] text-[#616a41]'
 }
 
 function priorityClassName(priority: InsightRecommendedActionRow['priority']) {
   if (priority === 'HIGH') return 'border-[#e5b8a8] bg-[#fff2ee] text-[#96513d]'
   if (priority === 'MEDIUM') return 'border-[#e6d2a5] bg-[#fff8e8] text-[#80612c]'
-  return 'border-[#d5e4c7] bg-[#f5fbef] text-[#5b7145]'
+  return 'border-[rgba(144,151,122,0.38)] bg-[rgba(144,151,122,0.14)] text-[#616a41]'
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -354,8 +355,8 @@ export default function DemandPlannerInsightCenterSection() {
   return (
     <div className="grid gap-6">
       <section className={`${surfaceClassName} overflow-hidden`}>
-        <div className="border-b border-[#efe1d5] bg-[radial-gradient(circle_at_top_left,_rgba(72,121,121,0.16),_transparent_34%),linear-gradient(135deg,#fff8ec_0%,#eef8f5_52%,#ffffff_100%)] px-6 py-6 sm:px-7">
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#5e8b84]">
+        <div className="border-b border-[#efe1d5] bg-[radial-gradient(circle_at_top_left,_rgba(144,151,122,0.22),_transparent_34%),linear-gradient(135deg,#fff8ec_0%,rgba(144,151,122,0.12)_52%,#ffffff_100%)] px-6 py-6 sm:px-7">
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#616a41]">
             Demand Planner Insight Center
           </p>
           <h2 className="mt-3 text-[1.9rem] font-bold tracking-[-0.04em] text-[#2d423f]">
@@ -376,25 +377,25 @@ export default function DemandPlannerInsightCenterSection() {
           <FilterSelect label="Territory" value={territoryId} onChange={setTerritoryId} options={territoryOptions} />
           <FilterSelect label="Warehouse" value={warehouseId} onChange={setWarehouseId} options={warehouseOptions} />
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-[#3f5652]">From date</span>
+            <span className="text-sm font-semibold text-[#616a41]">From date</span>
             <input
               type="date"
               value={fromDate}
               onChange={(event) => handleFromDateChange(event.target.value)}
-              className="w-full rounded-[1rem] border border-[#d6dfd8] bg-[#fffdfb] px-4 py-3 text-sm text-[#2f4540] outline-none transition duration-300 focus:border-[#6e9d94]"
+              className="w-full rounded-[1rem] border border-[#d6dfd8] bg-[#fffdfb] px-4 py-3 text-sm text-[#2f4540] outline-none transition duration-300 focus:border-[#90977a]"
             />
           </label>
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-[#3f5652]">To date</span>
+            <span className="text-sm font-semibold text-[#616a41]">To date</span>
             <input
               type="date"
               value={toDate}
               onChange={(event) => handleToDateChange(event.target.value)}
-              className="w-full rounded-[1rem] border border-[#d6dfd8] bg-[#fffdfb] px-4 py-3 text-sm text-[#2f4540] outline-none transition duration-300 focus:border-[#6e9d94]"
+              className="w-full rounded-[1rem] border border-[#d6dfd8] bg-[#fffdfb] px-4 py-3 text-sm text-[#2f4540] outline-none transition duration-300 focus:border-[#90977a]"
             />
           </label>
           <div className="rounded-[1.25rem] border border-[#e5ddd4] bg-[#fff9f3] px-4 py-4 text-sm leading-7 text-[#6f5a48] xl:col-span-2">
-            <p className="font-semibold text-[#4e655f]">Report window</p>
+            <p className="font-semibold text-[#616a41]">Report window</p>
             <p className="mt-2">
               Current window: <span className="font-semibold">{selectedWindowLabel}</span>
             </p>
@@ -409,7 +410,7 @@ export default function DemandPlannerInsightCenterSection() {
             type="button"
             onClick={() => void loadDashboard()}
             disabled={isLoading || !hasExplicitWindow}
-            className="rounded-[1rem] bg-[#3f756f] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(63,117,111,0.18)] transition duration-300 hover:bg-[#315f5a] disabled:cursor-not-allowed disabled:opacity-70"
+            className="rounded-[1rem] bg-[#616a41] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(97,106,65,0.18)] transition duration-300 hover:bg-[#525937] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isLoading ? 'Refreshing insights...' : 'Refresh insights'}
           </button>
@@ -417,7 +418,7 @@ export default function DemandPlannerInsightCenterSection() {
             type="button"
             onClick={() => void downloadPdf()}
             disabled={isDownloadingPdf || !hasExplicitWindow}
-            className="rounded-[1rem] border border-[#b8cbc7] bg-white px-5 py-3 text-sm font-semibold text-[#3f756f] transition duration-300 hover:border-[#79a79f] disabled:cursor-not-allowed disabled:opacity-70"
+            className="rounded-[1rem] border border-[rgba(144,151,122,0.45)] bg-white px-5 py-3 text-sm font-semibold text-[#616a41] transition duration-300 hover:border-[#616a41] hover:bg-[rgba(144,151,122,0.08)] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isDownloadingPdf ? 'Preparing PDF...' : 'Download PDF'}
           </button>
@@ -425,7 +426,7 @@ export default function DemandPlannerInsightCenterSection() {
             type="button"
             onClick={() => void downloadCsv()}
             disabled={isDownloadingCsv || !hasExplicitWindow}
-            className="rounded-[1rem] border border-[#b8cbc7] bg-white px-5 py-3 text-sm font-semibold text-[#3f756f] transition duration-300 hover:border-[#79a79f] disabled:cursor-not-allowed disabled:opacity-70"
+            className="rounded-[1rem] border border-[rgba(144,151,122,0.45)] bg-white px-5 py-3 text-sm font-semibold text-[#616a41] transition duration-300 hover:border-[#616a41] hover:bg-[rgba(144,151,122,0.08)] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isDownloadingCsv ? 'Preparing CSV...' : 'Download CSV'}
           </button>
@@ -446,7 +447,7 @@ export default function DemandPlannerInsightCenterSection() {
       </section>
 
       {feedback ? (
-        <div className="rounded-[1rem] border border-[#cfe2c8] bg-[#f3fbef] px-4 py-3 text-sm text-[#4d6c45]">
+        <div className="rounded-[1rem] border border-[rgba(144,151,122,0.4)] bg-[rgba(144,151,122,0.14)] px-4 py-3 text-sm text-[#616a41]">
           {feedback}
         </div>
       ) : null}
@@ -476,7 +477,7 @@ export default function DemandPlannerInsightCenterSection() {
               onClick={() => setActiveTab(tab)}
               className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition duration-300 ${
                 activeTab === tab
-                  ? 'bg-[#3f756f] text-white shadow-[0_12px_28px_rgba(63,117,111,0.16)]'
+                  ? 'bg-[#616a41] text-white shadow-[0_12px_28px_rgba(97,106,65,0.16)]'
                   : 'bg-[#f7eee7] text-[#6f5a48] hover:bg-[#efe2d8]'
               }`}
             >
@@ -523,11 +524,11 @@ function FilterSelect({
 }) {
   return (
     <label className="space-y-2">
-      <span className="text-sm font-semibold text-[#3f5652]">{label}</span>
+      <span className="text-sm font-semibold text-[#616a41]">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-[1rem] border border-[#d6dfd8] bg-[#fffdfb] px-4 py-3 text-sm text-[#2f4540] outline-none transition duration-300 focus:border-[#6e9d94]"
+        className="w-full rounded-[1rem] border border-[#d6dfd8] bg-[#fffdfb] px-4 py-3 text-sm text-[#2f4540] outline-none transition duration-300 focus:border-[#90977a]"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -555,7 +556,7 @@ function KpiCard({ kpi }: { kpi: InsightKpi }) {
       </p>
       <p className="mt-2 text-xs leading-5 text-[#7b8a84]">{kpi.caption}</p>
       {kpi.confidenceScore !== null ? (
-        <p className="mt-3 text-xs font-semibold text-[#5e8b84]">
+        <p className="mt-3 text-xs font-semibold text-[#616a41]">
           Confidence {formatPercent(kpi.confidenceScore)}
         </p>
       ) : null}
@@ -641,7 +642,7 @@ function DemandTrendsTab({ dashboard }: { dashboard: InsightCenterDashboard | nu
           getValue={(row) => row.estimated_retail_offtake_cases}
           getDetail={(row) => `Confidence ${formatPercent(row.confidence_score)}`}
           emptyMessage="No customer-sales rows are available yet."
-          colorClassName="bg-[#54715a]"
+          colorClassName="bg-[#616a41]"
           suffix="cases"
         />
         <SingleMetricBarsPanel
@@ -668,7 +669,7 @@ function DemandTrendsTab({ dashboard }: { dashboard: InsightCenterDashboard | nu
         getDetail={(row) => `Gap ${formatNumber(row.gap_cases)} cases`}
         leftLabel="Orders"
         rightLabel="Customer sales"
-        leftColorClassName="bg-[#3f756f]"
+        leftColorClassName="bg-[#616a41]"
         rightColorClassName="bg-[#d49a45]"
         emptyMessage="No order-versus-customer-sales rows are available."
       />
@@ -745,7 +746,7 @@ function PromotionsTab({ dashboard }: { dashboard: InsightCenterDashboard | null
           getRightValue={(row) => row.estimated_retail_offtake_cases}
           leftLabel="Orders"
           rightLabel="Customer sales"
-          leftColorClassName="bg-[#3f756f]"
+          leftColorClassName="bg-[#616a41]"
           rightColorClassName="bg-[#d49a45]"
           emptyMessage="No promotion impact rows are available."
         />
@@ -773,7 +774,7 @@ function PromotionsTab({ dashboard }: { dashboard: InsightCenterDashboard | null
         getDetail={(row) => `Total orders ${formatNumber(row.total_ordered_cases)} | Total customer sales ${formatNumber(row.total_estimated_retail_offtake_cases)}`}
         leftLabel="Promoted orders"
         rightLabel="Promoted customer sales"
-        leftColorClassName="bg-[#3f756f]"
+        leftColorClassName="bg-[#616a41]"
         rightColorClassName="bg-[#d49a45]"
         emptyMessage="No promotion-product rows are available."
       />
@@ -798,7 +799,7 @@ function CompetitorsTab({ dashboard }: { dashboard: InsightCenterDashboard | nul
           getDetail={(row) => `${row.competitor_mentions} competitor mentions`}
           leftLabel="Orders"
           rightLabel="Customer sales"
-          leftColorClassName="bg-[#3f756f]"
+          leftColorClassName="bg-[#616a41]"
           rightColorClassName="bg-[#d49a45]"
           emptyMessage="No competitor risk rows are available."
         />
@@ -967,7 +968,7 @@ function DrilldownTab({ dashboard }: { dashboard: InsightCenterDashboard | null 
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-[1.25rem] border border-[#dce8e4] bg-[#f6fbf8] px-4 py-4 text-sm leading-7 text-[#526963]">
+      <div className="rounded-[1.25rem] border border-[rgba(144,151,122,0.28)] bg-[rgba(144,151,122,0.12)] px-4 py-4 text-sm leading-7 text-[#5c684c]">
         This drilldown shows shop and SKU combinations with the clearest fulfilment gap or confidence risk. It helps explain which outlet and product combinations are driving the larger dashboard patterns.
       </div>
       <div className="overflow-x-auto">
@@ -1030,14 +1031,14 @@ function ReportTab({
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-      <article className="rounded-[1.35rem] border border-[#dce8e4] bg-[#f6fbf8] px-5 py-5">
-        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#5e8b84]">
+      <article className="rounded-[1.35rem] border border-[rgba(144,151,122,0.28)] bg-[rgba(144,151,122,0.12)] px-5 py-5">
+        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#616a41]">
           Report scope
         </p>
-        <p className="mt-3 text-sm leading-7 text-[#526963]">
+        <p className="mt-3 text-sm leading-7 text-[#5c684c]">
           Selected window: <span className="font-semibold">{selectedWindowLabel}</span>
         </p>
-        <p className="mt-2 text-sm leading-7 text-[#526963]">
+        <p className="mt-2 text-sm leading-7 text-[#5c684c]">
           Reports are blocked until both from and to dates are selected, so the dashboard and the PDF stay aligned with the exact period you want to review.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
@@ -1045,7 +1046,7 @@ function ReportTab({
             type="button"
             onClick={onDownloadPdf}
             disabled={isDownloadingPdf || !hasExplicitWindow}
-            className="rounded-[1rem] bg-[#3f756f] px-5 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-[#315f5a] disabled:cursor-not-allowed disabled:opacity-70"
+            className="rounded-[1rem] bg-[#616a41] px-5 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-[#525937] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isDownloadingPdf ? 'Preparing PDF...' : 'Download PDF'}
           </button>
@@ -1053,7 +1054,7 @@ function ReportTab({
             type="button"
             onClick={onDownloadCsv}
             disabled={isDownloadingCsv || !hasExplicitWindow}
-            className="rounded-[1rem] border border-[#b8cbc7] bg-white px-5 py-3 text-sm font-semibold text-[#3f756f] transition duration-300 hover:border-[#79a79f] disabled:cursor-not-allowed disabled:opacity-70"
+            className="rounded-[1rem] border border-[rgba(144,151,122,0.45)] bg-white px-5 py-3 text-sm font-semibold text-[#616a41] transition duration-300 hover:border-[#616a41] hover:bg-[rgba(144,151,122,0.08)] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isDownloadingCsv ? 'Preparing CSV...' : 'Download CSV'}
           </button>
@@ -1061,7 +1062,7 @@ function ReportTab({
       </article>
 
       <article className="grid gap-3">
-        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#5e8b84]">
+        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#616a41]">
           What the PDF includes
         </p>
         {reportSections.map((section) => (
@@ -1075,9 +1076,9 @@ function ReportTab({
         {(dashboard?.charts.recommendedActions ?? []).slice(0, 3).map((row) => (
           <div
             key={row.title}
-            className="rounded-[1.15rem] border border-[#dce8e4] bg-[#f6fbf8] px-4 py-4 text-sm leading-7 text-[#526963]"
+            className="rounded-[1.15rem] border border-[rgba(144,151,122,0.28)] bg-[rgba(144,151,122,0.12)] px-4 py-4 text-sm leading-7 text-[#5c684c]"
           >
-            <span className="font-semibold text-[#365b55]">{row.title}</span>
+            <span className="font-semibold text-[#616a41]">{row.title}</span>
             {' | '}
             {row.reason}
           </div>
@@ -1110,8 +1111,8 @@ function TrendLineChart({ rows }: { rows: InsightTrendPoint[] }) {
   )
 
   const series = [
-    { key: 'display_ordered_cases' as const, label: 'Orders', color: '#3f756f' },
-    { key: 'display_delivered_cases' as const, label: 'Deliveries', color: '#88a764' },
+    { key: 'display_ordered_cases' as const, label: 'Orders', color: '#616a41' },
+    { key: 'display_delivered_cases' as const, label: 'Deliveries', color: '#90977a' },
     { key: 'display_estimated_retail_offtake_cases' as const, label: 'Customer sales', color: '#d49a45' },
     { key: 'display_forecast_cases' as const, label: 'Forecast', color: '#5978a7' },
   ]
@@ -1136,7 +1137,7 @@ function TrendLineChart({ rows }: { rows: InsightTrendPoint[] }) {
     <article className={`${surfaceClassName} px-5 py-5`}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#5e8b84]">
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#616a41]">
             Demand and fulfilment trend
           </p>
           <h3 className="mt-2 text-[1.4rem] font-bold tracking-[-0.03em] text-[#2f4540]">
@@ -1252,7 +1253,7 @@ function DualMetricBarsPanel<T>({
 
   return (
     <article className={`${surfaceClassName} px-5 py-5`}>
-      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#5e8b84]">{title}</p>
+      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#616a41]">{title}</p>
       <p className="mt-3 text-sm leading-7 text-[#657670]">{description}</p>
       <div className="mt-5 grid gap-4">
         {rows.map((row) => {
@@ -1321,7 +1322,7 @@ function SingleMetricBarsPanel<T>({
 
   return (
     <article className={`${surfaceClassName} px-5 py-5`}>
-      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#5e8b84]">{title}</p>
+      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#616a41]">{title}</p>
       <p className="mt-3 text-sm leading-7 text-[#657670]">{description}</p>
       <div className="mt-5 grid gap-4">
         {rows.map((row) => (
@@ -1367,7 +1368,7 @@ function DetailCardsPanel({
 
   return (
     <article className={`${surfaceClassName} px-5 py-5`}>
-      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#5e8b84]">{title}</p>
+      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#616a41]">{title}</p>
       <p className="mt-3 text-sm leading-7 text-[#657670]">{description}</p>
       <div className="mt-5 grid gap-3">
         {rows.map((row) => (
@@ -1378,7 +1379,7 @@ function DetailCardsPanel({
             <div className="flex items-start justify-between gap-3">
               <p className="font-semibold text-[#2f4540]">{row.title}</p>
               {row.value ? (
-                <span className="rounded-full border border-[#d8e5df] bg-[#f6fbf8] px-3 py-1 text-xs font-semibold text-[#4d6e68]">
+                <span className="rounded-full border border-[rgba(144,151,122,0.28)] bg-[rgba(144,151,122,0.12)] px-3 py-1 text-xs font-semibold text-[#616a41]">
                   {row.value}
                 </span>
               ) : null}
@@ -1398,7 +1399,7 @@ function ActionPanel({ rows }: { rows: InsightRecommendedActionRow[] }) {
 
   return (
     <article className={`${surfaceClassName} px-5 py-5`}>
-      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#5e8b84]">
+      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#616a41]">
         Recommended actions
       </p>
       <p className="mt-3 text-sm leading-7 text-[#657670]">
@@ -1417,7 +1418,7 @@ function ActionPanel({ rows }: { rows: InsightRecommendedActionRow[] }) {
               </span>
             </div>
             <p className="mt-2 text-sm leading-6 text-[#6f807a]">{row.reason}</p>
-            <p className="mt-3 text-xs font-semibold text-[#5e8b84]">
+            <p className="mt-3 text-xs font-semibold text-[#616a41]">
               {row.owner} | {row.metric}
             </p>
           </div>
@@ -1444,7 +1445,7 @@ function TablePanel<T>({
 }) {
   return (
     <article className={`${surfaceClassName} px-5 py-5`}>
-      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#5e8b84]">{title}</p>
+      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#616a41]">{title}</p>
       <p className="mt-3 text-sm leading-7 text-[#657670]">{description}</p>
       <div className="mt-5 overflow-x-auto">
         <table className="min-w-full text-left text-sm">
@@ -1492,7 +1493,7 @@ function BarRow({
         <span>{label}</span>
         <span>{formatNumber(value)}</span>
       </div>
-      <div className="mt-1 h-2 rounded-full bg-[#edf2ee]">
+      <div className="mt-1 h-2 rounded-full bg-[rgba(144,151,122,0.18)]">
         <div
           className={`h-2 rounded-full ${colorClassName}`}
           style={{ width: `${Math.max(3, Math.min(100, (value / maxValue) * 100))}%` }}
@@ -1504,7 +1505,7 @@ function BarRow({
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="rounded-[1.15rem] border border-[#e8eee9] bg-[#fbfdfb] px-4 py-4 text-sm text-[#6f807a]">
+    <div className="rounded-[1.15rem] border border-[rgba(144,151,122,0.24)] bg-[rgba(144,151,122,0.08)] px-4 py-4 text-sm text-[#6f807a]">
       {message}
     </div>
   )
