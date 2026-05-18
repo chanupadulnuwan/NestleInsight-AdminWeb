@@ -364,10 +364,16 @@ export async function createTmAssignment(payload: {
   return data
 }
 
-export async function generateReturnPin(assignmentId: string) {
+export async function generateReturnPin(
+  assignmentId: string,
+  reviewNote?: string,
+) {
   const { data } = await apiClient.post<{ message: string; pin: string; expiresAt: string }>(
     '/delivery-assignments/return-pin',
-    { assignmentId },
+    {
+      assignmentId,
+      ...(reviewNote && reviewNote.trim() ? { reviewNote: reviewNote.trim() } : {}),
+    },
   )
   return data
 }

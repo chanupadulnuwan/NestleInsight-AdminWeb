@@ -7,6 +7,7 @@ import {
   type PortalActivityEntry,
 } from "../../api/activity";
 import { getApiErrorMessage } from "../../api/client";
+import { generateReturnPin } from "../../api/tm";
 import { TerritoryManagerPortalShell } from "../../components/TerritoryManagerPortalShell";
 import { useTmGuard } from "../../hooks/useTmGuard";
 
@@ -24,6 +25,49 @@ type ApprovalActivityReference = {
   kind: "delivery" | "load";
   id: string;
   status: "pending" | "resolved";
+};
+
+type SettlementReturnLine = {
+  productName: string;
+  quantity: number;
+  reason: string;
+  unitType: "ITEM" | "CASE";
+  reasonNote: string | null;
+  source: "SHOP_RETURN" | "UNFINISHED_DELIVERY";
+  orderCode: string | null;
+  shopName: string | null;
+};
+
+type SettlementOrderLine = {
+  orderId: string | null;
+  orderCode: string | null;
+  shopName: string | null;
+  itemCount: number;
+  subtotalBeforeDiscount: number;
+  discountAmount: number;
+  finalAmount: number;
+  paymentMethod: string | null;
+  promotionCode: string | null;
+  items: Array<{
+    productName: string;
+    quantity: number;
+  }>;
+};
+
+type SettlementSummary = {
+  assignmentId: string;
+  completedOrderTotal: number;
+  pendingOrderValue: number;
+  expectedCashAmount: number;
+  shopReturnValue: number;
+  cashReturnedAmount: number;
+  cashVarianceAmount: number;
+  cashVarianceType: string | null;
+  cashVarianceReason: string | null;
+  remainingStopsCount: number;
+  earlyClosureReason: string | null;
+  completedOrders: SettlementOrderLine[];
+  returnLines: SettlementReturnLine[];
 };
 
 function activityTone(type: string) {
@@ -52,6 +96,13 @@ function activityTone(type: string) {
 
 function formatTimestamp(value: string) {
   return new Date(value).toLocaleString();
+}
+
+function formatCurrencyAmount(value: number) {
+  return `LKR ${value.toLocaleString("en-LK", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function getApprovalTarget(activity: PortalActivityEntry) {
@@ -129,6 +180,116 @@ function getApprovalActivityReference(
   return null;
 }
 
+function getSettlementActivityReference(activity: PortalActivityEntry) {
+  const assignmentId = activity.metadata?.assignmentId;
+  if (!assignmentId) {
+    return null;
+  }
+
+  if (activity.type === "WAREHOUSE_RETURN_PIN_REQUESTED") {
+    return {
+      assignmentId: String(assignmentId),
+      status: "pending" as const,
+    };
+  }
+
+  if (activity.type === "WAREHOUSE_RETURN_PIN_GENERATED") {
+    return {
+      assignmentId: String(assignmentId),
+      status: "resolved" as const,
+    };
+  }
+
+  return null;
+}
+
+function readSettlement(activity: PortalActivityEntry): SettlementSummary | null {
+  const raw = activity.metadata?.settlement;
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const settlement = raw as Record<string, unknown>;
+  const rawReturnLines = Array.isArray(settlement.returnLines)
+    ? settlement.returnLines
+    : [];
+  const rawCompletedOrders = Array.isArray(settlement.completedOrders)
+    ? settlement.completedOrders
+    : [];
+
+  return {
+    assignmentId: String(settlement.assignmentId ?? activity.metadata?.assignmentId ?? ""),
+    completedOrderTotal: Number(settlement.completedOrderTotal ?? 0),
+    pendingOrderValue: Number(settlement.pendingOrderValue ?? 0),
+    expectedCashAmount: Number(settlement.expectedCashAmount ?? 0),
+    shopReturnValue: Number(settlement.shopReturnValue ?? 0),
+    cashReturnedAmount: Number(settlement.cashReturnedAmount ?? 0),
+    cashVarianceAmount: Number(settlement.cashVarianceAmount ?? 0),
+    cashVarianceType:
+      typeof settlement.cashVarianceType === "string"
+        ? settlement.cashVarianceType
+        : null,
+    cashVarianceReason:
+      typeof settlement.cashVarianceReason === "string"
+        ? settlement.cashVarianceReason
+        : null,
+    remainingStopsCount: Number(settlement.remainingStopsCount ?? 0),
+    earlyClosureReason:
+      typeof settlement.earlyClosureReason === "string"
+        ? settlement.earlyClosureReason
+        : null,
+    completedOrders: rawCompletedOrders.map((entry) => {
+      const order = entry as Record<string, unknown>;
+      const rawItems = Array.isArray(order.items) ? order.items : [];
+      return {
+        orderId: typeof order.orderId === "string" ? order.orderId : null,
+        orderCode:
+          typeof order.orderCode === "string" ? order.orderCode : null,
+        shopName: typeof order.shopName === "string" ? order.shopName : null,
+        itemCount: Number(order.itemCount ?? 0),
+        subtotalBeforeDiscount: Number(order.subtotalBeforeDiscount ?? 0),
+        discountAmount: Number(order.discountAmount ?? 0),
+        finalAmount: Number(order.finalAmount ?? 0),
+        paymentMethod:
+          typeof order.paymentMethod === "string" ? order.paymentMethod : null,
+        promotionCode:
+          typeof order.promotionCode === "string" ? order.promotionCode : null,
+        items: rawItems.map((item) => {
+          const orderItem = item as Record<string, unknown>;
+          return {
+            productName: String(orderItem.productName ?? "Product"),
+            quantity: Number(orderItem.quantity ?? 0),
+          };
+        }),
+      };
+    }),
+    returnLines: rawReturnLines.map((line) => {
+      const entry = line as Record<string, unknown>;
+      return {
+        productName: String(entry.productName ?? "Product"),
+        quantity: Number(entry.quantity ?? 0),
+        reason: String(entry.reason ?? ""),
+        unitType: entry.unitType === "ITEM" ? "ITEM" : "CASE",
+        reasonNote:
+          typeof entry.reasonNote === "string" ? entry.reasonNote : null,
+        source:
+          entry.source === "SHOP_RETURN" ? "SHOP_RETURN" : "UNFINISHED_DELIVERY",
+        orderCode: typeof entry.orderCode === "string" ? entry.orderCode : null,
+        shopName: typeof entry.shopName === "string" ? entry.shopName : null,
+      };
+    }),
+  };
+}
+
+function formatReason(reason: string) {
+  return reason
+    .toLowerCase()
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export default function TmActivityCenterPage() {
   const { user, isUnauthorized } = useTmGuard();
   const [activities, setActivities] = useState<PortalActivityEntry[]>([]);
@@ -137,6 +298,13 @@ export default function TmActivityCenterPage() {
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [resolutionByActivityId, setResolutionByActivityId] = useState<
     Record<string, ApprovalResolution>
+  >({});
+  const [settlementActioningId, setSettlementActioningId] = useState<string | null>(null);
+  const [settlementResolutionByActivityId, setSettlementResolutionByActivityId] = useState<
+    Record<string, ApprovalResolution>
+  >({});
+  const [settlementReviewNotes, setSettlementReviewNotes] = useState<
+    Record<string, string>
   >({});
 
   if (isUnauthorized) return <Navigate to="/" replace />;
@@ -185,15 +353,55 @@ export default function TmActivityCenterPage() {
     () =>
       activities.filter((activity) => {
         const isApprovalAction = getApprovalTarget(activity) !== null;
-        return !isApprovalAction && !activity.type.includes("FEEDBACK");
+        const isSettlementReview =
+          activity.type === "WAREHOUSE_RETURN_PIN_REQUESTED";
+        return (
+          !isApprovalAction &&
+          !isSettlementReview &&
+          !activity.type.includes("FEEDBACK")
+        );
       }),
     [activities],
   );
 
+  const settlementActivities = useMemo(() => {
+    const sortedActivities = [...activities].sort(
+      (left, right) =>
+        new Date(right.createdAt).getTime() -
+        new Date(left.createdAt).getTime(),
+    );
+    const latestActivityByAssignmentId = new Map<
+      string,
+      { activity: PortalActivityEntry; status: "pending" | "resolved" }
+    >();
+
+    for (const activity of sortedActivities) {
+      const reference = getSettlementActivityReference(activity);
+      if (!reference) {
+        continue;
+      }
+
+      if (!latestActivityByAssignmentId.has(reference.assignmentId)) {
+        latestActivityByAssignmentId.set(reference.assignmentId, {
+          activity,
+          status: reference.status,
+        });
+      }
+    }
+
+    return Array.from(latestActivityByAssignmentId.values())
+      .filter(({ status }) => status === "pending")
+      .map(({ activity }) => activity);
+  }, [activities]);
+
   const groupedHighlights = useMemo(() => {
     return {
-      total: actionableActivities.length + generalActivities.length,
+      total:
+        actionableActivities.length +
+        settlementActivities.length +
+        generalActivities.length,
       routeApprovals: actionableActivities.length,
+      endRouteReviews: settlementActivities.length,
       stockAlerts: generalActivities.filter(
         (item) =>
           item.type.includes("LOW_STOCK") || item.type.includes("REFILL"),
@@ -202,7 +410,7 @@ export default function TmActivityCenterPage() {
         item.type.includes("ORDER_COMPLETED"),
       ).length,
     };
-  }, [actionableActivities.length, generalActivities]);
+  }, [actionableActivities.length, generalActivities, settlementActivities.length]);
 
   const handleReview = async (
     activity: PortalActivityEntry,
@@ -271,6 +479,40 @@ export default function TmActivityCenterPage() {
     }
   };
 
+  const handleGenerateSettlementPin = async (activity: PortalActivityEntry) => {
+    const assignmentId = activity.metadata?.assignmentId;
+    if (!assignmentId) {
+      return;
+    }
+
+    setSettlementActioningId(activity.id);
+    setError(null);
+
+    try {
+      const response = await generateReturnPin(
+        String(assignmentId),
+        settlementReviewNotes[activity.id],
+      );
+
+      setSettlementResolutionByActivityId((current) => ({
+        ...current,
+        [activity.id]: {
+          decision: "APPROVED",
+          message: response.message,
+          pin: response.pin,
+          pinExpiresAt: response.expiresAt,
+        },
+      }));
+
+      const refreshedActivities = await fetchPortalActivities();
+      setActivities(refreshedActivities.activities);
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError));
+    } finally {
+      setSettlementActioningId(null);
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -278,14 +520,14 @@ export default function TmActivityCenterPage() {
       user={user}
       breadcrumb="Territory Manager / Activity Center"
       title="Activity Center"
-      description="Review route start approvals, warehouse alerts, and general territory activity in one place."
-      pendingCounts={{ approvals: actionableActivities.length }}
+      description="Review route approvals, end-route settlement requests, warehouse alerts, and general territory activity in one place."
+      pendingCounts={{ approvals: actionableActivities.length + settlementActivities.length }}
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ["All activity", groupedHighlights.total],
           ["Route approvals", groupedHighlights.routeApprovals],
-          ["Refill alerts", groupedHighlights.stockAlerts],
+          ["End route reviews", groupedHighlights.endRouteReviews],
           ["Completed orders", groupedHighlights.completedOrders],
         ].map(([label, value]) => (
           <div
@@ -400,6 +642,300 @@ export default function TmActivityCenterPage() {
                     )}
 
                     <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-[#a37d63]">
+                      {formatTimestamp(activity.createdAt)}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-[#4d3020]">
+            End Route Review
+          </h2>
+          <span className="rounded-full bg-[#e8f1e7] px-3 py-1 text-sm font-bold text-[#3d6f47]">
+            {settlementActivities.length} Waiting
+          </span>
+        </div>
+        <div className={surfaceClass}>
+          {loading ? (
+            <p className="px-5 py-10 text-center text-sm text-[#7f6657]">
+              Loading route-close reviews...
+            </p>
+          ) : null}
+          {!loading ? (
+            <div className="flex flex-col gap-4 px-5 py-5">
+              {settlementActivities.length === 0 ? (
+                <div className="rounded-[1.3rem] border border-dashed border-[#d9c9bb] bg-[#fffaf7] px-5 py-8 text-center text-sm text-[#7f6657]">
+                  No end-route reviews are waiting right now.
+                </div>
+              ) : null}
+              {settlementActivities.map((activity) => {
+                const settlement = readSettlement(activity);
+                const resolution = settlementResolutionByActivityId[activity.id];
+                const isBusy = settlementActioningId === activity.id;
+                const cashMismatch = Math.abs(
+                  settlement?.cashVarianceAmount ?? 0,
+                ) >= 0.01;
+                const reviewNote = settlementReviewNotes[activity.id] ?? "";
+                const canGeneratePin =
+                  !cashMismatch || reviewNote.trim().length > 0;
+
+                return (
+                  <article
+                    key={activity.id}
+                    className="rounded-[1.3rem] border border-[#d7e3d4] bg-[#fbfdf9] px-5 py-5"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <p className="text-lg font-semibold text-[#4d3020]">
+                          {activity.title}
+                        </p>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#6d7a6b]">
+                          {activity.message}
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-[#b8d1b8] bg-[#eef7ed] px-3 py-1 text-xs font-semibold text-[#3d6f47]">
+                        End Route Review
+                      </span>
+                    </div>
+
+                    {settlement ? (
+                      <div className="mt-4 space-y-4">
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          <div className="rounded-[1rem] border border-[#dce8d8] bg-white px-4 py-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#70806f]">
+                              Expected Cash
+                            </p>
+                            <p className="mt-2 text-sm font-bold text-[#335a3a]">
+                              {formatCurrencyAmount(settlement.expectedCashAmount)}
+                            </p>
+                          </div>
+                          <div className="rounded-[1rem] border border-[#dce8d8] bg-white px-4 py-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#70806f]">
+                              Returned Cash
+                            </p>
+                            <p className="mt-2 text-sm font-bold text-[#335a3a]">
+                              {formatCurrencyAmount(settlement.cashReturnedAmount)}
+                            </p>
+                          </div>
+                          <div className="rounded-[1rem] border border-[#dce8d8] bg-white px-4 py-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#70806f]">
+                              Shop Returns
+                            </p>
+                            <p className="mt-2 text-sm font-bold text-[#5c4030]">
+                              {formatCurrencyAmount(settlement.shopReturnValue)}
+                            </p>
+                          </div>
+                          <div className="rounded-[1rem] border border-[#dce8d8] bg-white px-4 py-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#70806f]">
+                              Remaining Stops
+                            </p>
+                            <p className="mt-2 text-sm font-bold text-[#5c4030]">
+                              {settlement.remainingStopsCount}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div
+                          className={[
+                            "rounded-[1rem] border px-4 py-3 text-sm",
+                            cashMismatch
+                              ? "border-[#efc2bd] bg-[#fff1ef] text-[#a24e47]"
+                              : "border-[#dce8d8] bg-[#f5fbf3] text-[#3d6f47]",
+                          ].join(" ")}
+                        >
+                          <p className="font-semibold">
+                            Cash variance: {formatCurrencyAmount(settlement.cashVarianceAmount)}
+                          </p>
+                          {settlement.cashVarianceType ? (
+                            <p className="mt-1">
+                              Type: {formatReason(settlement.cashVarianceType)}
+                            </p>
+                          ) : null}
+                          {settlement.cashVarianceReason ? (
+                            <p className="mt-1">
+                              Reason: {settlement.cashVarianceReason}
+                            </p>
+                          ) : null}
+                          {settlement.earlyClosureReason ? (
+                            <p className="mt-1">
+                              Early closure: {settlement.earlyClosureReason}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-[#70806f]">
+                            Order Details
+                          </p>
+                          <div className="mt-2 flex flex-col gap-2">
+                            {settlement.completedOrders.length === 0 ? (
+                              <div className="rounded-[1rem] border border-dashed border-[#d9c9bb] bg-white px-4 py-3 text-sm text-[#7f6657]">
+                                No completed deliveries were found for this route yet.
+                              </div>
+                            ) : (
+                              settlement.completedOrders.map((order, index) => (
+                                <div
+                                  key={`${activity.id}-order-${order.orderCode ?? index}`}
+                                  className="rounded-[1rem] border border-[#e7ece3] bg-white px-4 py-3"
+                                >
+                                  <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                      <p className="font-semibold text-[#4d3020]">
+                                        {[order.shopName, order.orderCode]
+                                          .filter(Boolean)
+                                          .join(" · ")}
+                                      </p>
+                                      <p className="mt-1 text-xs text-[#7f6657]">
+                                        {order.itemCount} line(s) ·{" "}
+                                        {order.paymentMethod === "CASH_ON_DELIVERY"
+                                          ? "Cash on delivery"
+                                          : "Standard checkout"}
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-sm font-bold text-[#335a3a]">
+                                        {formatCurrencyAmount(order.finalAmount)}
+                                      </p>
+                                      {Math.abs(order.discountAmount) >= 0.01 ? (
+                                        <p className="mt-1 text-xs font-semibold text-[#3d6f47]">
+                                          Discount: {formatCurrencyAmount(order.discountAmount)}
+                                        </p>
+                                      ) : null}
+                                      {order.promotionCode ? (
+                                        <p className="mt-1 text-xs text-[#8b5a3a]">
+                                          Promo: {order.promotionCode}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                  {order.items.length > 0 ? (
+                                    <p className="mt-2 text-sm text-[#6d7a6b]">
+                                      {order.items
+                                        .map(
+                                          (item) =>
+                                            `${item.productName} (${item.quantity})`,
+                                        )
+                                        .join(" · ")}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-[#70806f]">
+                            Return Details
+                          </p>
+                          <div className="mt-2 flex flex-col gap-2">
+                            {settlement.returnLines.length === 0 ? (
+                              <div className="rounded-[1rem] border border-dashed border-[#d9c9bb] bg-white px-4 py-3 text-sm text-[#7f6657]">
+                                No return products were listed with this route close.
+                              </div>
+                            ) : (
+                              settlement.returnLines.map((line, index) => (
+                                <div
+                                  key={`${activity.id}-${line.productName}-${index}`}
+                                  className="rounded-[1rem] border border-[#e7ece3] bg-white px-4 py-3"
+                                >
+                                  <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                      <p className="font-semibold text-[#4d3020]">
+                                        {line.productName}
+                                      </p>
+                                      <p className="mt-1 text-xs text-[#7f6657]">
+                                        {[line.shopName, line.orderCode]
+                                          .filter(Boolean)
+                                          .join(" · ")}
+                                      </p>
+                                    </div>
+                                    <span className="rounded-full bg-[#f4efe9] px-2.5 py-1 text-xs font-semibold text-[#6b5444]">
+                                      {line.quantity} {line.unitType === "ITEM" ? "item(s)" : "case(s)"}
+                                    </span>
+                                  </div>
+                                  <p className="mt-2 text-sm text-[#6d7a6b]">
+                                    {formatReason(line.reason)}
+                                    {line.reasonNote ? ` · ${line.reasonNote}` : ""}
+                                  </p>
+                                  <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-[#9b826f]">
+                                    {line.source === "SHOP_RETURN"
+                                      ? "Shop owner return"
+                                      : "Unfinished delivery"}
+                                  </p>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        {resolution ? (
+                          <div className="rounded-[1.1rem] border border-[#cfe2c8] bg-[#f3fbef] px-4 py-3 text-sm text-[#4d6c45]">
+                            <p className="font-semibold">{resolution.message}</p>
+                            {resolution.pin ? (
+                              <p className="mt-2">
+                                PIN:{" "}
+                                <span className="font-mono font-bold">
+                                  {resolution.pin}
+                                </span>
+                                {resolution.pinExpiresAt
+                                  ? ` · Expires ${formatTimestamp(resolution.pinExpiresAt)}`
+                                  : ""}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {cashMismatch ? (
+                              <div className="rounded-[1rem] border border-[#efc2bd] bg-[#fff1ef] px-4 py-3 text-sm text-[#a24e47]">
+                                <p className="font-semibold">
+                                  Warning: returned cash does not match the expected settlement.
+                                </p>
+                                <p className="mt-1">
+                                  Add the reason below before generating the PIN.
+                                </p>
+                              </div>
+                            ) : null}
+                            <textarea
+                              value={reviewNote}
+                              onChange={(event) =>
+                                setSettlementReviewNotes((current) => ({
+                                  ...current,
+                                  [activity.id]: event.target.value,
+                                }))
+                              }
+                              rows={3}
+                              className="w-full rounded-[1rem] border border-[#d9c9bb] bg-white px-4 py-3 text-sm text-[#4d3020] outline-none transition focus:border-[#8b5a3a]"
+                              placeholder={
+                                cashMismatch
+                                  ? "Reason for the cash mismatch (required before PIN generation)."
+                                  : "Review note for the distributor (optional)."
+                              }
+                            />
+                            <div className="flex flex-wrap gap-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleGenerateSettlementPin(activity)
+                                }
+                                disabled={isBusy || !canGeneratePin}
+                                className="rounded-[1rem] bg-[#3f7a4e] px-4 py-2.5 text-sm font-semibold text-white transition duration-300 hover:bg-[#356642] disabled:cursor-not-allowed disabled:opacity-70"
+                              >
+                                {isBusy ? "Generating..." : "Generate PIN"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+
+                    <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-[#8f9a8d]">
                       {formatTimestamp(activity.createdAt)}
                     </p>
                   </article>

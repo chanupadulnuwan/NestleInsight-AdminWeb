@@ -5,7 +5,6 @@ import {
   fetchTmAssignments,
   fetchTmIncidents,
   fetchTmReturns,
-  generateReturnPin,
   type TmAssignment,
   type TmIncident,
   type TmInventoryItem,
@@ -47,10 +46,6 @@ export default function TmStockPage() {
   const [assignments, setAssignments] = useState<TmAssignment[]>([])
   const [tripsLoading, setTripsLoading] = useState(true)
   const [tripsError, setTripsError] = useState<string | null>(null)
-  const [generatingPinId, setGeneratingPinId] = useState<string | null>(null)
-  const [pinResult, setPinResult] = useState<Record<string, { pin: string; expiresAt: string }>>(
-    {},
-  )
 
   if (isUnauthorized) {
     return <Navigate to="/" replace />
@@ -77,20 +72,6 @@ export default function TmStockPage() {
       .catch((requestError) => setTripsError(getApiErrorMessage(requestError)))
       .finally(() => setTripsLoading(false))
   }, [])
-
-  const handleGenerateReturnPin = async (assignmentId: string) => {
-    setGeneratingPinId(assignmentId)
-
-    try {
-      const response = await generateReturnPin(assignmentId)
-      setPinResult((current) => ({
-        ...current,
-        [assignmentId]: { pin: response.pin, expiresAt: response.expiresAt },
-      }))
-    } finally {
-      setGeneratingPinId(null)
-    }
-  }
 
   if (!user) {
     return null
@@ -334,29 +315,8 @@ export default function TmStockPage() {
                 </div>
 
                 {assignment.status === 'ACTIVE' ? (
-                  <div className="flex flex-col items-end gap-2">
-                    {pinResult[assignment.id] ? (
-                      <div className="rounded-[1.35rem] border border-[#eee2d7] bg-[#fff9f5] px-5 py-3 text-center">
-                        <p className="text-xs text-[#7f6657]">Return PIN</p>
-                        <p className="mt-1 font-mono text-2xl font-bold tracking-widest text-[#4d3020]">
-                          {pinResult[assignment.id].pin}
-                        </p>
-                        <p className="mt-1 text-xs text-[#7f6657]">
-                          Expires {new Date(pinResult[assignment.id].expiresAt).toLocaleTimeString()}
-                        </p>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => void handleGenerateReturnPin(assignment.id)}
-                        disabled={generatingPinId === assignment.id}
-                        className="rounded-[1rem] bg-[#8b5a3a] px-4 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-[#73492f] disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {generatingPinId === assignment.id
-                          ? 'Generating...'
-                          : 'Generate Final Return PIN'}
-                      </button>
-                    )}
+                  <div className="max-w-xs rounded-[1.2rem] border border-[#dce8d8] bg-[#f6fbf4] px-4 py-3 text-sm text-[#4b644d]">
+                    End-route PIN generation now happens from Activity Center after the distributor sends the route-close review.
                   </div>
                 ) : null}
               </div>
