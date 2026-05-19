@@ -136,12 +136,29 @@ body {
 
 .mission-vision-shell {
   background:
-    linear-gradient(180deg, rgba(43, 22, 15, 0.96) 0%, rgba(93, 54, 35, 0.46) 13%, rgba(255, 250, 245, 0.94) 34%, #fffdfb 58%, #fff9f4 100%);
+    linear-gradient(
+      180deg,
+      rgba(17, 7, 4, 0.99) 0px,
+      rgba(17, 7, 4, 0.97) 48px,
+      rgba(39, 18, 11, 0.88) 92px,
+      rgba(84, 49, 32, 0.56) 148px,
+      rgba(176, 131, 101, 0.2) 212px,
+      rgba(255, 250, 245, 0.95) 278px,
+      #fffdfb 344px,
+      #fff9f4 100%
+    );
 }
 
 .mission-vision-topfade {
   background:
-    linear-gradient(180deg, rgba(16, 6, 3, 0.92) 0%, rgba(55, 28, 16, 0.42) 32%, rgba(255, 250, 245, 0) 100%);
+    linear-gradient(
+      180deg,
+      rgba(12, 5, 3, 0.99) 0px,
+      rgba(12, 5, 3, 0.97) 48px,
+      rgba(45, 22, 13, 0.82) 106px,
+      rgba(112, 72, 50, 0.34) 176px,
+      rgba(255, 250, 245, 0) 246px
+    );
 }
 
 .mission-vision-sideglow {

@@ -55,7 +55,7 @@ export default function MissionVisionSection() {
       aria-labelledby="mission-vision-heading"
       className="mission-vision-shell relative overflow-hidden px-4 pb-20 pt-0 sm:px-6 sm:pb-24 lg:px-8 xl:px-10"
     >
-      <div className="mission-vision-topfade pointer-events-none absolute inset-x-0 top-0 h-44 sm:h-52 lg:h-60" />
+      <div className="mission-vision-topfade pointer-events-none absolute inset-x-0 top-0 h-[200px] sm:h-[220px] lg:h-[240px]" />
       <div className="mission-vision-sideglow pointer-events-none absolute inset-0" />
 
       <div className="relative mx-auto w-full max-w-[1700px]">
