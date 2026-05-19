@@ -15,9 +15,8 @@ export default function Home() {
       {/* Website auth update: keep the hero unchanged visually while letting the navbar Login button open the portal modal. */}
       <HeroSection onLoginClick={() => setIsAuthModalOpen(true)} />
       <main className="relative overflow-hidden bg-white">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-[#fff4e8] via-white to-white" />
-        <ProblemSection />
         <MissionVisionSection />
+        <ProblemSection />
         <FeaturesSection />
         <HighlightSection />
       </main>

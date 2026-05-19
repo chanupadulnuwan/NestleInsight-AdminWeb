@@ -1,77 +1,99 @@
-import SectionIntro from './SectionIntro'
-
-const cards = [
-  {
-    title: 'Mission',
-    text: 'To eliminate the data black hole in small retail distribution by capturing real-time shop-level data and connecting shops, territories, and field teams through a unified digital platform.',
-  },
-  {
-    title: 'Vision',
-    text: 'To build an intelligent distribution ecosystem powered by accurate data—enabling precise demand forecasting and smarter business decisions.',
-  },
+const missionLines = [
+  'Capture real-time shop signals, route activity, and',
+  'territory movement in one practical system that',
+  'small retail teams can actually use every day.',
 ]
+
+const visionLines = [
+  'Turn field evidence into confident forecasting,',
+  'faster decisions, and cleaner distribution planning',
+  'across shops, warehouses, and territories.',
+]
+
+const animatedLines = [
+  'mission-vision-line mission-vision-line-primary hidden lg:block left-[-3%] top-[58%] w-[58%] -rotate-[35deg]',
+  'mission-vision-line mission-vision-line-secondary hidden lg:block left-[42%] top-[53%] w-[58%] -rotate-[34deg]',
+  'mission-vision-line mission-vision-line-soft hidden xl:block left-[10%] top-[16%] w-[34%] rotate-[11deg]',
+  'mission-vision-line mission-vision-line-soft hidden xl:block right-[6%] top-[20%] w-[28%] -rotate-[18deg]',
+  'mission-vision-line mission-vision-line-tertiary hidden lg:block left-[28%] top-[66%] w-[25%] -rotate-[26deg]',
+]
+
+function CopyBlock({
+  title,
+  lines,
+  align,
+  className,
+}: {
+  title: string
+  lines: string[]
+  align: 'left' | 'right'
+  className: string
+}) {
+  const isRight = align === 'right'
+
+  return (
+    <div className={className}>
+      <div className={isRight ? 'lg:ml-auto lg:max-w-[25rem] lg:text-right' : 'lg:max-w-[25rem]'}>
+        <h2 className="font-display text-[3.3rem] font-semibold uppercase leading-none tracking-[-0.05em] text-[#4a2716] sm:text-[4.4rem] lg:text-[5.15rem]">
+          {title}
+        </h2>
+        <div
+          className={`mt-6 space-y-2 font-[Georgia,\"Times New Roman\",serif] text-[1.55rem] leading-[1.55] text-[#2b180f] sm:text-[1.85rem] lg:text-[2.05rem]`}
+        >
+          {lines.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function MissionVisionSection() {
   return (
-    <section className="px-6 pb-24 sm:px-8 lg:px-10">
-      <div className="mx-auto max-w-7xl rounded-[2.25rem] border border-[#f0ddc8] bg-[linear-gradient(180deg,#fffdfb_0%,#fff7ee_100%)] px-6 py-10 shadow-[0_28px_70px_rgba(58,26,7,0.08)] sm:px-10 sm:py-12 lg:px-14 lg:py-14">
-        <SectionIntro
-          eyebrow="Mission & Vision"
-          title="A sharper operating model for modern distribution."
-          description="INSIGHT is built to connect market execution with planning intelligence. These two principles guide how the platform captures signals, structures visibility, and supports better decisions."
-          align="center"
-        />
+    <section
+      aria-labelledby="mission-vision-heading"
+      className="mission-vision-shell relative overflow-hidden px-4 pb-20 pt-0 sm:px-6 sm:pb-24 lg:px-8 xl:px-10"
+    >
+      <div className="mission-vision-topfade pointer-events-none absolute inset-x-0 top-0 h-44 sm:h-52 lg:h-60" />
+      <div className="mission-vision-sideglow pointer-events-none absolute inset-0" />
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-2">
-          {cards.map((card, index) => (
-            <article
-              key={card.title}
-              className="card-sheen group relative overflow-hidden rounded-[2rem] border border-[#efd7bf] bg-white/95 p-8 transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_28px_60px_rgba(63,28,10,0.12)] sm:p-10"
-            >
-              <div className="absolute inset-x-8 top-0 h-1 rounded-b-full bg-gradient-to-r from-[#c97935] via-[#efb068] to-[#f8dcc0]" />
-              <div className="absolute -right-10 top-6 h-28 w-28 rounded-full bg-[#f9d5ad]/18 blur-3xl transition duration-500 group-hover:scale-125" />
+      <div className="relative mx-auto w-full max-w-[1700px]">
+        <span id="mission-vision-heading" className="sr-only">
+          Mission and vision
+        </span>
 
-              <div className="relative flex items-start justify-between gap-6">
-                <div>
-                  <span className="inline-flex items-center gap-3 rounded-full border border-[#f3dcc4] bg-[#fff8f1] px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-[#aa602a]">
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#fff1df] text-sm font-semibold text-[#c26f2f]">
-                      0{index + 1}
-                    </span>
-                    {card.title}
-                  </span>
-                  <p className="mt-8 text-xl leading-9 text-[#2b1b12] sm:text-[1.55rem]">
-                    {card.text}
-                  </p>
-                </div>
+        {animatedLines.map((line) => (
+          <span key={line} className={line} />
+        ))}
 
-                <span className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#f2dec8] bg-[#fffaf5] text-[#b9682b] shadow-[inset_0_0_0_1px_rgba(210,127,47,0.1)] sm:inline-flex">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-6 w-6"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    {card.title === 'Mission' ? (
-                      <>
-                        <circle cx="12" cy="12" r="8" />
-                        <path d="M12 9v6" />
-                        <path d="M9 12h6" />
-                      </>
-                    ) : (
-                      <>
-                        <path d="M12 3l3 6 6 3-6 3-3 6-3-6-6-3 6-3 3-6Z" />
-                        <circle cx="12" cy="12" r="1.4" />
-                      </>
-                    )}
-                  </svg>
-                </span>
+        <div className="relative grid min-h-[46rem] items-center gap-12 px-4 pb-6 pt-16 sm:px-8 sm:pt-20 lg:min-h-[50rem] lg:grid-cols-[1.08fr_0.84fr_1.08fr] lg:gap-4 lg:px-10 lg:pb-10 lg:pt-24 xl:px-14">
+          <CopyBlock
+            title="Mission"
+            lines={missionLines}
+            align="left"
+            className="mission-vision-copy animate-rise order-1 lg:-translate-y-[5.5rem]"
+          />
+
+          <div className="mission-vision-logo-wrap animate-rise order-2 flex items-center justify-center lg:translate-y-1">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(214,166,122,0.24)_0%,rgba(214,166,122,0.08)_36%,transparent_72%)] blur-3xl" />
+              <div className="mission-vision-logo-card relative rounded-[2.5rem] px-8 py-7 sm:px-10 sm:py-9 lg:px-11 lg:py-10">
+                <img
+                  src="/images/mission-vision-logo.png"
+                  alt="Nestle Insight logo"
+                  className="mx-auto h-auto w-[12.5rem] sm:w-[15rem] lg:w-[17rem] xl:w-[18.5rem]"
+                />
               </div>
-            </article>
-          ))}
+            </div>
+          </div>
+
+          <CopyBlock
+            title="Vision"
+            lines={visionLines}
+            align="right"
+            className="mission-vision-copy animate-rise order-3 lg:translate-y-[6rem]"
+          />
         </div>
       </div>
     </section>

@@ -134,6 +134,58 @@ body {
   box-shadow: 0 24px 60px rgba(60, 30, 14, 0.09);
 }
 
+.mission-vision-shell {
+  background:
+    linear-gradient(180deg, rgba(43, 22, 15, 0.96) 0%, rgba(93, 54, 35, 0.46) 13%, rgba(255, 250, 245, 0.94) 34%, #fffdfb 58%, #fff9f4 100%);
+}
+
+.mission-vision-topfade {
+  background:
+    linear-gradient(180deg, rgba(16, 6, 3, 0.92) 0%, rgba(55, 28, 16, 0.42) 32%, rgba(255, 250, 245, 0) 100%);
+}
+
+.mission-vision-sideglow {
+  background:
+    radial-gradient(circle at 10% 22%, rgba(246, 205, 162, 0.34), transparent 20%),
+    radial-gradient(circle at 50% 46%, rgba(214, 166, 122, 0.16), transparent 14%),
+    radial-gradient(circle at 92% 74%, rgba(249, 220, 186, 0.26), transparent 18%);
+}
+
+.mission-vision-logo-card {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.92), rgba(255, 252, 248, 0.78) 48%, rgba(255, 246, 237, 0.3) 100%);
+}
+
+.mission-vision-line {
+  position: absolute;
+  height: 1px;
+  border-radius: 999px;
+  transform-origin: left center;
+  opacity: 0.74;
+  pointer-events: none;
+  animation: missionLineDrift 9s ease-in-out infinite;
+}
+
+.mission-vision-line-primary {
+  background: linear-gradient(90deg, rgba(84, 42, 20, 0.92) 0%, rgba(112, 62, 36, 0.72) 55%, rgba(84, 42, 20, 0.12) 100%);
+}
+
+.mission-vision-line-secondary {
+  background: linear-gradient(90deg, rgba(109, 67, 43, 0.22) 0%, rgba(84, 42, 20, 0.92) 42%, rgba(173, 114, 74, 0.24) 100%);
+  animation-duration: 11.5s;
+  animation-direction: reverse;
+}
+
+.mission-vision-line-soft {
+  background: linear-gradient(90deg, rgba(191, 137, 96, 0.08) 0%, rgba(118, 70, 42, 0.72) 46%, rgba(191, 137, 96, 0.08) 100%);
+  animation-duration: 13.5s;
+}
+
+.mission-vision-line-tertiary {
+  background: linear-gradient(90deg, rgba(255, 233, 214, 0.05) 0%, rgba(96, 55, 32, 0.78) 48%, rgba(255, 233, 214, 0.05) 100%);
+  animation-duration: 8s;
+}
+
 .dark-panel {
   background:
     radial-gradient(circle at top right, rgba(251, 185, 116, 0.14), transparent 26%),
@@ -259,6 +311,17 @@ body {
   50% {
     opacity: 1;
     transform: translate3d(0, -2px, 0);
+  }
+}
+
+@keyframes missionLineDrift {
+  0%, 100% {
+    opacity: 0.54;
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    opacity: 0.92;
+    transform: translate3d(18px, -8px, 0);
   }
 }
 
