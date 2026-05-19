@@ -17,7 +17,7 @@ const socialLinks = [
 export default function Footer() {
   return (
     <footer id="contact" className="bg-[#100704] text-[#f5e7db]">
-      <div className="mx-auto max-w-7xl px-6 py-14 sm:px-8 lg:px-10">
+      <div className="mx-auto max-w-[1880px] px-4 py-14 sm:px-6 lg:px-8 xl:px-10">
         <div className="grid gap-10 lg:grid-cols-[1.3fr_0.7fr_0.9fr_0.8fr]">
           <div>
             <InsightLogo light />

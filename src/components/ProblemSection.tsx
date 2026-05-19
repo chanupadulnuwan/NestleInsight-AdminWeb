@@ -26,8 +26,8 @@ const solutionSignals = [
 
 export default function ProblemSection() {
   return (
-    <section id="about" className="section-shell px-6 py-24 sm:px-8 sm:py-28 lg:px-10">
-      <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
+    <section id="about" className="section-shell px-4 py-24 sm:px-6 sm:py-28 lg:px-8 xl:px-10">
+      <div className="relative mx-auto grid max-w-[1880px] gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
         <div className="relative">
           <SectionIntro
             eyebrow="Why This Matters"

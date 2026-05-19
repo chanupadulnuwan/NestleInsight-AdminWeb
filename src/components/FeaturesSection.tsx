@@ -86,8 +86,8 @@ const features: Feature[] = [
 
 export default function FeaturesSection() {
   return (
-    <section id="products" className="section-shell px-6 pb-24 sm:px-8 lg:px-10">
-      <div className="relative mx-auto max-w-7xl">
+    <section id="products" className="section-shell px-4 pb-24 sm:px-6 lg:px-8 xl:px-10">
+      <div className="relative mx-auto max-w-[1880px]">
         <SectionIntro
           eyebrow="Platform Value"
           title="Built to manage the operational signals that distribution teams depend on."

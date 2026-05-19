@@ -15,8 +15,8 @@ const flowSteps = [
 
 export default function HighlightSection() {
   return (
-    <section className="px-6 pb-24 sm:px-8 lg:px-10">
-      <div className="mx-auto max-w-7xl overflow-hidden rounded-[2.2rem] border border-[#2b120a] dark-panel px-6 py-10 text-white sm:px-10 sm:py-12 lg:px-14">
+    <section className="px-4 pb-24 sm:px-6 lg:px-8 xl:px-10">
+      <div className="mx-auto max-w-[1880px] overflow-hidden rounded-[2.2rem] border border-[#2b120a] dark-panel px-6 py-10 text-white sm:px-10 sm:py-12 lg:px-14 xl:px-16">
         <div className="grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
           <div className="relative">
             <span className="inline-flex items-center gap-2 rounded-full border border-[#f0b87f]/20 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-[#efb068]">
