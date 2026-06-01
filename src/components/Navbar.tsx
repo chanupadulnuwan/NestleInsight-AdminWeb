@@ -1,9 +1,9 @@
 import { useState } from 'react'
 
 const navItems = [
-  { label: 'Home', href: '#home' },
-  { label: 'About us', href: '#about' },
-  { label: 'Products', href: '#products' },
+  { label: 'Home', href: '/#home' },
+  { label: 'About us', href: '/#about' },
+  { label: 'Products', href: '/products' },
 ]
 
 export default function Navbar({

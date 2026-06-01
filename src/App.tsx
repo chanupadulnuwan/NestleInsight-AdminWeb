@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import Home from './pages/Home'
+import PublicProductsPage from './pages/PublicProductsPage'
 import AdminDashboard from './pages/AdminDashboard'
 import ProductsPage from './pages/ProductsPage'
 import TerritoriesPage from './pages/TerritoriesPage'
@@ -41,6 +42,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/products" element={<PublicProductsPage />} />
 
       {/* Admin routes */}
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
