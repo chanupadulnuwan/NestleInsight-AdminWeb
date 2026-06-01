@@ -5,6 +5,81 @@ import Navbar from '../components/Navbar'
 import { fetchProducts, type ProductRecord } from '../api/products'
 import { resolveMediaUrl } from '../api/client'
 
+const fallbackProducts: ProductRecord[] = [
+  {
+    id: 'prod-1',
+    productName: 'Milo Activ-Go 400g',
+    sku: 'MILO-400G',
+    categoryId: 'cat-1',
+    categoryName: 'Beverages',
+    brand: 'Milo',
+    packSize: '400g',
+    unitPrice: 1200,
+    productsPerCase: 24,
+    casePrice: 28800,
+    barcode: '4791234567890',
+    description: 'Milo chocolate malt beverage powder',
+    imageUrl: null,
+    status: 'ACTIVE',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'prod-2',
+    productName: 'Maggi 2-Minute Noodles',
+    sku: 'MAGGI-78G',
+    categoryId: 'cat-2',
+    categoryName: 'Food',
+    brand: 'Maggi',
+    packSize: '78g',
+    unitPrice: 150,
+    productsPerCase: 36,
+    casePrice: 5400,
+    barcode: '4790987654321',
+    description: 'Maggi chicken flavor instant noodles',
+    imageUrl: null,
+    status: 'ACTIVE',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'prod-3',
+    productName: 'Nescafe Classic 50g',
+    sku: 'NESC-50G',
+    categoryId: 'cat-1',
+    categoryName: 'Beverages',
+    brand: 'Nescafe',
+    packSize: '50g',
+    unitPrice: 950,
+    productsPerCase: 12,
+    casePrice: 11400,
+    barcode: '4791122334455',
+    description: 'Nescafe classic instant coffee',
+    imageUrl: null,
+    status: 'ACTIVE',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'prod-4',
+    productName: 'Nestomalt 400g',
+    sku: 'NEST-400G',
+    categoryId: 'cat-1',
+    categoryName: 'Beverages',
+    brand: 'Nestomalt',
+    packSize: '400g',
+    unitPrice: 1100,
+    productsPerCase: 24,
+    casePrice: 26400,
+    barcode: '4795544332211',
+    description: 'Nestomalt malted milk drink',
+    imageUrl: null,
+    status: 'ACTIVE',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
+];
+
 export default function PublicProductsPage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [products, setProducts] = useState<ProductRecord[]>([])
@@ -17,7 +92,8 @@ export default function PublicProductsPage() {
         // Only show active products to public
         setProducts(response.products.filter(p => p.status === 'ACTIVE'))
       } catch (error) {
-        console.error("Failed to load products", error)
+        console.error("Failed to load products, using fallback data", error)
+        setProducts(fallbackProducts)
       } finally {
         setIsLoading(false)
       }
