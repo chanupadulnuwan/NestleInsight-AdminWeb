@@ -89,8 +89,14 @@ export default function PublicProductsPage() {
     async function loadProducts() {
       try {
         const response = await fetchProducts()
-        // Only show active products to public
-        setProducts(response.products.filter(p => p.status === 'ACTIVE'))
+        const activeProducts = response?.products?.filter(p => p.status === 'ACTIVE') || []
+        
+        if (activeProducts.length === 0) {
+          // If the database is completely empty (or no active products), use fallback data for demonstration
+          setProducts(fallbackProducts)
+        } else {
+          setProducts(activeProducts)
+        }
       } catch (error) {
         console.error("Failed to load products, using fallback data", error)
         setProducts(fallbackProducts)
