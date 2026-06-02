@@ -183,7 +183,7 @@ export default function PublicProductsPage() {
                     {/* Footer */}
                     <div className="mt-auto flex items-center justify-between pt-4 border-t border-[#f0e6dd]">
                       <span className="text-[1.35rem] font-bold text-[#b86d35]">
-                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(product.unitPrice)}
+                        {new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR' }).format(product.unitPrice)}
                       </span>
                       <button className="rounded-[0.85rem] border border-[#d7baa3] bg-[#fff7f0] px-4 py-2 text-sm font-semibold text-[#8b5a3a] transition duration-300 hover:border-[#c9976f] hover:bg-[#8b5a3a] hover:text-white">
                         View Details
