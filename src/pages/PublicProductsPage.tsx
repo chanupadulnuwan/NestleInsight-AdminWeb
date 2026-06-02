@@ -130,8 +130,8 @@ export default function PublicProductsPage() {
       </section>
 
       {/* PRODUCTS GRID */}
-      <main className="flex-1 bg-white px-5 py-16 sm:px-8 lg:px-12">
-        <div className="mx-auto max-w-[1300px]">
+      <main className="flex-1 bg-white px-5 py-16 sm:px-8 lg:px-12 2xl:px-16">
+        <div className="mx-auto max-w-[1800px]">
           {isLoading ? (
             <div className="flex justify-center py-20 text-[#a37d63]">
               <div className="text-lg font-medium">Loading catalog...</div>
@@ -141,7 +141,7 @@ export default function PublicProductsPage() {
               <div className="text-lg">No products available at the moment.</div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {products.map((product) => (
                 <article
                   key={product.id}
