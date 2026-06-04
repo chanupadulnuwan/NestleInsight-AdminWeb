@@ -113,3 +113,11 @@ export async function updateProduct(
   }>(`/products/${productId}`, toProductFormData(payload));
   return data;
 }
+
+export async function fetchPublicProducts() {
+  const { data } = await apiClient.get<{
+    message: string;
+    products: ProductRecord[];
+  }>("/products/public");
+  return data;
+}
